@@ -1,0 +1,337 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MediSight v3 - Token Reset Requested</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#eff1f3",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1e",
+              error: "#ba1a1a",
+              "surface-container-low": "#f2f4f6",
+              "primary-container": "#131b2e",
+              "outline-variant": "#c6c6cd",
+              "secondary-fixed": "#dce1ff",
+              "tertiary-fixed": "#9cf2e8",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "on-primary-fixed-variant": "#3f465c",
+              "on-primary-fixed": "#131b2e",
+              "tertiary-container": "#00201d",
+              "on-error-container": "#93000a",
+              "surface-container": "#eceef0",
+              "inverse-surface": "#2d3133",
+              "on-surface-variant": "#45464d",
+              "surface-tint": "#565e74",
+              outline: "#76777d",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary-container": "#389189",
+              "on-secondary-container": "#fffbff",
+              "primary-fixed": "#dae2fd",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#80d5cb",
+              secondary: "#1d4ed8",
+              "on-secondary-fixed": "#001551",
+              "surface-dim": "#d8dadc",
+              "on-primary": "#ffffff",
+              background: "#f7f9fb",
+              primary: "#000000",
+              "on-background": "#191c1e",
+              "surface-bright": "#f7f9fb",
+              "on-tertiary-fixed-variant": "#00504a",
+              tertiary: "#000000",
+              "secondary-fixed-dim": "#b7c4ff",
+              "on-tertiary-fixed": "#00201d",
+              "on-secondary-fixed-variant": "#0039b5",
+              "on-secondary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-primary-container": "#7c839b",
+              "surface-variant": "#e0e3e5",
+              "inverse-primary": "#bec6e0",
+              "secondary-container": "#4069f2",
+              "primary-fixed-dim": "#bec6e0",
+              surface: "#f7f9fb",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              xl: "32px",
+              sm: "8px",
+              md: "16px",
+              margin: "24px",
+              base: "4px",
+              xs: "4px",
+              lg: "24px",
+              gutter: "16px",
+            },
+            fontFamily: {
+              h3: ["Inter"],
+              "data-md": ["IBM Plex Mono"],
+              "label-caps": ["Inter"],
+              "body-md": ["Inter"],
+              "data-lg": ["IBM Plex Mono"],
+              h2: ["Inter"],
+              "body-sm": ["Inter"],
+              "data-sm": ["IBM Plex Mono"],
+              h1: ["Inter"],
+            },
+            fontSize: {
+              h3: [
+                "18px",
+                {
+                  lineHeight: "1.4",
+                  fontWeight: "600",
+                },
+              ],
+              "data-md": [
+                "14px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "500",
+                },
+              ],
+              "label-caps": [
+                "11px",
+                {
+                  lineHeight: "1",
+                  letterSpacing: "0.05em",
+                  fontWeight: "700",
+                },
+              ],
+              "body-md": [
+                "14px",
+                {
+                  lineHeight: "1.5",
+                  fontWeight: "400",
+                },
+              ],
+              "data-lg": [
+                "20px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "500",
+                },
+              ],
+              h2: [
+                "24px",
+                {
+                  lineHeight: "1.3",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "body-sm": [
+                "13px",
+                {
+                  lineHeight: "1.5",
+                  fontWeight: "400",
+                },
+              ],
+              "data-sm": [
+                "12px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "400",
+                },
+              ],
+              h1: [
+                "32px",
+                {
+                  lineHeight: "1.2",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "600",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased"
+  >
+    <!-- Top Navigation Suppressed: Transactional Screen Intent -->
+    <main class="flex-grow flex flex-col md:flex-row w-full min-h-screen">
+      <!-- Left Side: Branding / Context -->
+      <section
+        class="hidden md:flex flex-col justify-between w-1/2 bg-primary-container p-xl relative overflow-hidden text-on-primary"
+      >
+        <!-- Abstract Medical Graphic Background -->
+        <div
+          class="absolute inset-0 opacity-10 pointer-events-none"
+          data-alt="A highly abstract, clinical visualization featuring flowing geometric lines and subtle data nodes against a deep navy background. The lighting is soft and diffuse, highlighting the technological precision of the design. The composition is clean, modern, and evokes a sense of secure, high-tech medical data environments. Professional grays and stark whites provide contrast within the dark blue canvas."
+          style="
+            background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuDn-2G7OGKM1dG6SeiNs0l1Scp4PEOLBJ4kJCLGBJPFd75IMdfODutate3F0xBeLZ0Sde3tSh_fVx8gvsYcfL0s2Sy6RiVIt5tYvAyV7_zBuiUE9NRcF6ema8EAqrpOeDKk-L4cSUPilTYLD7fPDB_brM9TKVvxIjeZQhwgv_7R4Tadx-Ge0O_5RJ4T6xLiaa_m-oOeQZhCjKdVFtitZXeoTncPSvzffLLe-bL_yDnEZxcWxyujKABl7dsEMoRZY_hYFMHb7Cme8VvZ&quot;);
+            background-size: cover;
+            background-position: center;
+          "
+        ></div>
+        <!-- Header Branding -->
+        <div class="relative z-10 flex items-center space-x-sm">
+          <span class="font-h2 text-h2 text-on-primary tracking-tight"
+            >MediSight</span
+          >
+        </div>
+        <!-- Centered Value Proposition -->
+        <div class="relative z-10 max-w-md mx-auto my-auto pt-24 pb-12">
+          <h1 class="font-h1 text-h1 text-on-primary mb-md leading-tight">
+            Secure Access Protocol
+          </h1>
+          <p
+            class="font-body-md text-body-md text-on-primary-container leading-relaxed"
+          >
+            Institutional security mandates require authorized credential
+            verification. Please follow the token reset instructions dispatched
+            to your registered clinical communication channel.
+          </p>
+          <div class="mt-lg flex items-center space-x-md opacity-80">
+            <span
+              class="material-symbols-outlined text-outline-variant"
+              data-icon="lock_reset"
+              >lock_reset</span
+            >
+            <span
+              class="font-data-md text-data-md text-outline-variant uppercase tracking-wider"
+              >Protocol: Auth_Rst_v3</span
+            >
+          </div>
+        </div>
+        <!-- Footer Branding -->
+        <div class="relative z-10">
+          <p class="font-data-sm text-data-sm text-on-primary-container">
+            MediSight Clinical Systems © Institutional Access Only.
+          </p>
+        </div>
+      </section>
+      <!-- Right Side: Interaction Form Canvas -->
+      <section
+        class="w-full md:w-1/2 bg-surface-container-lowest flex flex-col justify-center items-center p-lg relative"
+      >
+        <!-- Mobile Branding Header (Visible only on small screens) -->
+        <div
+          class="md:hidden absolute top-0 left-0 w-full p-md flex items-center justify-center space-x-xs border-b border-surface-variant bg-surface-container-lowest z-20"
+        >
+          <span class="font-h3 text-h3 text-primary tracking-tight"
+            >MediSight</span
+          >
+        </div>
+        <div class="w-full max-w-md mt-16 md:mt-0 relative z-10">
+          <!-- Main Bento Card -->
+          <div
+            class="bg-surface-container-lowest border border-surface-variant rounded-xl shadow-none overflow-hidden relative"
+          >
+            <!-- Decorative Top Border indicating system action -->
+            <div class="h-1 w-full bg-secondary"></div>
+            <div class="p-lg">
+              <!-- Header Section -->
+              <div class="flex flex-col items-center mb-xl">
+                <div
+                  class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-md border border-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-[32px] text-secondary"
+                    data-icon="mark_email_read"
+                    style="font-variation-settings: &quot;FILL&quot; 1"
+                    >mark_email_read</span
+                  >
+                </div>
+                <h2 class="font-h2 text-h2 text-on-surface mb-xs text-center">
+                  Token Reset Requested
+                </h2>
+                <p
+                  class="font-body-sm text-body-sm text-on-surface-variant text-center"
+                >
+                  Identity verification initiated.
+                </p>
+              </div>
+              <!-- Content Area -->
+              <div
+                class="border border-surface-variant rounded-lg bg-surface-container-low p-md mb-xl flex flex-col items-center justify-center text-center"
+              >
+                <span
+                  class="font-body-md text-body-md text-on-surface font-medium mb-sm block w-full"
+                  >An email is sent to your institutional Email.</span
+                >
+                <div
+                  class="w-full border-t border-outline-variant opacity-30 my-sm"
+                ></div>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">
+                  Please check your inbox and follow the secure link to
+                  establish a new access token. This link will expire in
+                  <span class="font-data-md text-data-md text-on-surface"
+                    >15:00</span
+                  >
+                  minutes.
+                </p>
+              </div>
+              <!-- Actions Area -->
+              <div
+                class="flex justify-center mt-lg pt-md border-t border-surface-variant"
+              >
+                <a
+                  class="flex items-center space-x-xs font-body-sm text-body-sm text-secondary hover:underline transition-all duration-150 group"
+                  href="/login"
+                >
+                  <span
+                    class="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform duration-200"
+                    data-icon="arrow_back"
+                    >arrow_back</span
+                  >
+                  <span>Back to Login</span>
+                </a>
+              </div>
+            </div>
+          </div>
+          <!-- Auxiliary Support Links -->
+        </div>
+      </section>
+    </main>
+    <!-- Shared Footer -->
+    <footer class="border-t border-outline-variant bg-white z-10 relative">
+      <div class="flex flex-col md:flex-row justify-between items-center px-8 py-4 w-full max-w-7xl mx-auto">
+        <div class="mb-4 md:mb-0">
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans">© Clinical Intelligence Systems. All rights reserved.</span>
+        </div>
+        <nav class="flex flex-wrap justify-center gap-6">
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/privacy">Privacy Policy</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/terms">Terms of Service</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/support">Support</a>
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            Operational
+          </span>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

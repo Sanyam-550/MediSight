@@ -1,0 +1,4753 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediSight v3</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <!-- Auth guard: redirect to /login if no valid token -->
+    <script>
+      (function () {
+        var token = localStorage.getItem('medisight_token');
+        if (!token) { window.location.replace('/login'); return; }
+        // Async verify — if the token has been invalidated, kick the user out
+        fetch('/api/auth/verify', { headers: { 'Authorization': 'Bearer ' + token } })
+          .then(function (r) { if (!r.ok) { localStorage.removeItem('medisight_token'); window.location.replace('/login'); } })
+          .catch(function () {});
+        // Expose logout helper for the React header
+        window.medisightLogout = function () {
+          fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+          }).finally(function () {
+            localStorage.removeItem('medisight_token');
+            localStorage.removeItem('medisight_user');
+            window.location.replace('/login');
+          });
+        };
+      })();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+        line-height: 1;
+        display: inline-block;
+        vertical-align: middle;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body style="margin: 0; padding: 0">
+    <div id="root">
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          flex-direction: column;
+          gap: 16px;
+          font-family: sans-serif;
+          color: #64748b;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          "
+        ></div>
+        <span style="font-size: 14px">Loading MediSight...</span>
+      </div>
+      <style>
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      </style>
+    </div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useCallback, useRef } = React;
+      const {
+        LineChart,
+        Line,
+        BarChart,
+        Bar,
+        ScatterChart,
+        Scatter,
+        PieChart,
+        Pie,
+        Cell,
+        XAxis,
+        YAxis,
+        CartesianGrid,
+        Tooltip,
+        Legend,
+        ResponsiveContainer,
+        AreaChart,
+        Area,
+        ComposedChart,
+      } = Recharts;
+      // Icon components using Material Symbols (Google Fonts) — no CDN dependency issues
+      function _ms(name) {
+        return function Icon({
+          size = 24,
+          color = "currentColor",
+          opacity = 1,
+        }) {
+          return (
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: size,
+                color: color,
+                opacity: opacity,
+                lineHeight: 1,
+                display: "inline-block",
+                verticalAlign: "middle",
+                flexShrink: 0,
+              }}
+            >
+              {name}
+            </span>
+          );
+        };
+      }
+      const Activity = _ms("vital_signs");
+      const AlertTriangle = _ms("warning");
+      const Users = _ms("group");
+      const Heart = _ms("favorite");
+      const TrendingUp = _ms("trending_up");
+      const Brain = _ms("psychology");
+      const Layers = _ms("layers");
+      const Zap = _ms("bolt");
+      const MapIcon = _ms("map");
+      const BarChart2 = _ms("bar_chart");
+      const Shield = _ms("shield");
+      const Bell = _ms("notifications");
+      const Settings = _ms("settings");
+      const Clock = _ms("schedule");
+      const Database = _ms("database");
+      const GitBranch = _ms("account_tree");
+      const ChevronRight = _ms("chevron_right");
+      const RefreshCw = _ms("refresh");
+      const Network = _ms("hub");
+      const Cpu = _ms("memory");
+      const ArrowUpRight = _ms("north_east");
+      const Eye = _ms("visibility");
+      const Stethoscope = _ms("stethoscope");
+
+      // ─────────────────────────────────────────────
+      // CONSTANTS
+      // ─────────────────────────────────────────────
+      const API = "http://127.0.0.1:5000/api";
+      const CLR = {
+        blue: "#2563eb",
+        red: "#dc2626",
+        amber: "#d97706",
+        green: "#16a34a",
+        teal: "#0d9488",
+        purple: "#7c3aed",
+      };
+      const LT = {
+        blue: "#eff6ff",
+        red: "#fef2f2",
+        amber: "#fffbeb",
+        green: "#f0fdf4",
+        teal: "#f0fdfa",
+        purple: "#f5f3ff",
+      };
+      const PALETTE = [
+        CLR.blue,
+        CLR.red,
+        CLR.amber,
+        CLR.green,
+        CLR.teal,
+        CLR.purple,
+      ];
+
+      // ─────────────────────────────────────────────
+      // UTILITIES
+      // ─────────────────────────────────────────────
+      async function apiFetch(path) {
+        try {
+          const r = await fetch(API + path);
+          if (!r.ok) throw new Error();
+          return r.json();
+        } catch {
+          return null;
+        }
+      }
+
+      const statusClr = (pct) =>
+        pct >= 85 ? CLR.red : pct >= 70 ? CLR.amber : CLR.green;
+      const n = (v) => (v ?? 0).toLocaleString();
+
+      const GLOBAL_CSS = `
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Outfit', sans-serif; background: #f0f4f8; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes fadeUp { from { opacity:0;transform:translateY(8px) } to { opacity:1;transform:translateY(0) } }
+      @keyframes scrollTicker { 0% { transform:translateX(0) } 100% { transform:translateX(-50%) } }
+      ::-webkit-scrollbar { width: 5px; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      .section-enter { animation: fadeUp 0.3s ease; }
+    `;
+
+      // ─────────────────────────────────────────────
+      // SHARED COMPONENTS
+      // ─────────────────────────────────────────────
+      function Spin({ msg = "Loading…" }) {
+        return (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              color: "#94a3b8",
+              fontSize: 13,
+              padding: "20px 0",
+            }}
+          >
+            <div
+              style={{
+                width: 18,
+                height: 18,
+                border: "2.5px solid #e2e8f0",
+                borderTopColor: CLR.blue,
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                flexShrink: 0,
+              }}
+            />
+            {msg}
+          </div>
+        );
+      }
+
+      function Empty({ msg = "No data available" }) {
+        return (
+          <div
+            style={{
+              color: "#94a3b8",
+              fontSize: 13,
+              padding: "20px 0",
+              textAlign: "center",
+            }}
+          >
+            {msg}
+          </div>
+        );
+      }
+
+      function Card({ children, style = {} }) {
+        return (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              overflow: "hidden",
+              ...style,
+            }}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      function CardHd({ title, sub, badge, bc = "blue" }) {
+        return (
+          <div
+            style={{
+              padding: "14px 18px",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div>
+              <div
+                style={{ fontSize: 13.5, fontWeight: 600, color: "#0f172a" }}
+              >
+                {title}
+              </div>
+              {sub && (
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                  {sub}
+                </div>
+              )}
+            </div>
+            {badge && (
+              <span
+                style={{
+                  background: LT[bc] || "#f1f5f9",
+                  color: CLR[bc] || "#64748b",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {badge}
+              </span>
+            )}
+          </div>
+        );
+      }
+
+      function StatPill({ label, value, color, bg }) {
+        return (
+          <div
+            style={{
+              background: bg || LT.blue,
+              borderRadius: 8,
+              padding: "8px 14px",
+              border: `1px solid ${color || CLR.blue}22`,
+            }}
+          >
+            <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>
+              {label}
+            </div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: color || CLR.blue,
+                fontFamily: "'IBM Plex Mono', monospace",
+              }}
+            >
+              {value}
+            </div>
+          </div>
+        );
+      }
+
+      function KpiCard({ color = "blue", Icon, value, label, badge, foot }) {
+        return (
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "18px 18px 16px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              borderTop: `3px solid ${CLR[color]}`,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  background: LT[color],
+                  borderRadius: 8,
+                  width: 38,
+                  height: 38,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon size={18} color={CLR[color]} />
+              </div>
+              {badge && (
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 600,
+                    padding: "3px 8px",
+                    borderRadius: 20,
+                    background: "#fecaca",
+                    color: CLR.red,
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 26,
+                fontWeight: 600,
+                letterSpacing: -1,
+                lineHeight: 1,
+                marginBottom: 4,
+              }}
+            >
+              {value}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>{label}</div>
+            {foot && (
+              <div
+                style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: "1px solid #e2e8f0",
+                  fontSize: 11,
+                  color: "#94a3b8",
+                }}
+              >
+                {foot}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function Tag({ children, color = "blue" }) {
+        return (
+          <span
+            style={{
+              background: LT[color] || "#f1f5f9",
+              color: CLR[color] || "#64748b",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "3px 10px",
+              borderRadius: 20,
+              display: "inline-block",
+            }}
+          >
+            {children}
+          </span>
+        );
+      }
+
+      function Grid2({ children, style = {} }) {
+        return (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+              marginBottom: 16,
+              ...style,
+            }}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      function SectionHd({ title, desc }) {
+        return (
+          <div style={{ marginBottom: 20 }}>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: "#0f172a",
+                letterSpacing: -0.4,
+                marginBottom: 2,
+              }}
+            >
+              {title}
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>{desc}</div>
+          </div>
+        );
+      }
+
+      const CT = ({ children }) => (
+        <div style={{ padding: 18 }}>{children}</div>
+      );
+
+      // ─────────────────────────────────────────────
+      // SIDEBAR
+      // ─────────────────────────────────────────────
+      const NAV = [
+        {
+          group: "Overview",
+          items: [{ id: "dashboard", Icon: Activity, label: "Dashboard" }],
+        },
+        {
+          group: "Analytics",
+          items: [
+            { id: "capacity", Icon: BarChart2, label: "Capacity" },
+            { id: "prediction", Icon: TrendingUp, label: "Prediction" },
+            { id: "outbreak", Icon: AlertTriangle, label: "Outbreak Monitor" },
+            { id: "heatmap", Icon: MapIcon, label: "State Heatmap" },
+          ],
+        },
+        {
+          group: "Operations",
+          items: [
+            { id: "resources", Icon: Layers, label: "Resources" },
+            { id: "scenario", Icon: Zap, label: "Scenarios" },
+          ],
+        },
+        {
+          group: "Intelligence",
+          items: [{ id: "ml", Icon: Brain, label: "ML Intelligence" }],
+        },
+      ];
+
+      const SEC_LABELS = {
+        dashboard: "Overview Dashboard",
+        capacity: "Bed & Capacity Management",
+        prediction: "Admission Forecasting",
+        outbreak: "Outbreak Monitor",
+        heatmap: "State-Level Heatmap",
+        resources: "Resource Allocation",
+        scenario: "Emergency Scenarios",
+        ml: "ML Intelligence Suite",
+      };
+
+      function Sidebar({ active, onNav, alertCount }) {
+        return (
+          <div
+            style={{
+              position: "fixed",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 236,
+              background: "#0f1e3a",
+              display: "flex",
+              flexDirection: "column",
+              zIndex: 200,
+              overflowY: "auto",
+            }}
+          >
+            <div
+              style={{
+                padding: "20px 20px 18px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                alignItems: "center",
+                gap: 11,
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: CLR.blue,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Activity size={18} color="#fff" />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "#fff",
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  MediSight
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(255,255,255,0.3)",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Hospital Intelligence v3
+                </div>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, padding: "8px 10px" }}>
+              {NAV.map(({ group, items }) => (
+                <div key={group} style={{ marginBottom: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: 1,
+                      textTransform: "uppercase",
+                      color: "rgba(255,255,255,0.28)",
+                      padding: "12px 10px 6px",
+                    }}
+                  >
+                    {group}
+                  </div>
+                  {items.map(({ id, Icon, label }) => (
+                    <div
+                      key={id}
+                      onClick={() => onNav(id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 9,
+                        padding: "9px 10px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        marginBottom: 1,
+                        background: active === id ? CLR.blue : "transparent",
+                        color: active === id ? "#fff" : "rgba(255,255,255,0.6)",
+                        fontWeight: active === id ? 500 : 400,
+                        fontSize: 13.5,
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <Icon size={16} opacity={active === id ? 1 : 0.8} />
+                      <span style={{ flex: 1 }}>{label}</span>
+                      {id === "ml" && (
+                        <span
+                          style={{
+                            background: CLR.blue,
+                            color: "#fff",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 6px",
+                            borderRadius: 10,
+                          }}
+                        >
+                          12
+                        </span>
+                      )}
+                      {id === "outbreak" && alertCount > 0 && (
+                        <span
+                          style={{
+                            background: "#ef4444",
+                            color: "#fff",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 7px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          {alertCount}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                padding: 16,
+                borderTop: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: "#22c55e",
+                  }}
+                />
+                <span
+                  style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}
+                >
+                  System Online
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.2)",
+                  marginTop: 4,
+                }}
+              >
+                MySQL primary · CSV fallback
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // HEADER + ALERT BAR
+      // ─────────────────────────────────────────────
+      function Header({ section, time }) {
+        return (
+          <div
+            style={{
+              height: 60,
+              background: "#fff",
+              borderBottom: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 28px",
+              position: "sticky",
+              top: 0,
+              zIndex: 100,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11.5, color: "#94a3b8" }}>
+                MediSight / {SEC_LABELS[section]}
+              </div>
+              <div
+                style={{
+                  fontSize: 15.5,
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  letterSpacing: -0.2,
+                }}
+              >
+                {SEC_LABELS[section]}
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 13,
+                  color: "#64748b",
+                  background: "#f7f9fc",
+                  border: "1px solid #e2e8f0",
+                  padding: "5px 12px",
+                  borderRadius: 8,
+                }}
+              >
+                {time}
+              </div>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  background: "#f7f9fc",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <Bell size={15} color="#64748b" />
+              </div>
+              <div
+                title="Logout"
+                onClick={() => window.medisightLogout && window.medisightLogout()}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  background: "#f7f9fc",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 17, color: "#64748b" }}
+                >logout</span>
+              </div>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: CLR.blue,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {(localStorage.getItem('medisight_user') || 'MS').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || 'MS'}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function AlertBar({ ticker }) {
+        if (!ticker) return null;
+        const doubled = ticker + " | " + ticker;
+        return (
+          <div
+            style={{
+              background: "#fffbeb",
+              borderBottom: "1px solid #fde68a",
+              padding: "8px 28px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              overflow: "hidden",
+            }}
+          >
+            <span
+              style={{
+                background: "#f59e0b",
+                color: "#fff",
+                fontSize: 9.5,
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: 4,
+                letterSpacing: 0.8,
+                textTransform: "uppercase",
+                flexShrink: 0,
+              }}
+            >
+              LIVE
+            </span>
+            <div style={{ overflow: "hidden", flex: 1 }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  whiteSpace: "nowrap",
+                  color: "#92400e",
+                  fontSize: 12.5,
+                  animation: "scrollTicker 40s linear infinite",
+                }}
+              >
+                {doubled}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: DASHBOARD
+      // ─────────────────────────────────────────────
+      function DashboardSection({ onAlertsLoad }) {
+        const [kpis, setKpis] = useState(null);
+        const [alerts, setAlerts] = useState(null);
+        const [resources, setRes] = useState(null);
+        const [forecast, setFc] = useState(null);
+        const [trends, setTrends] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [k, a, r, f, t] = await Promise.all([
+              apiFetch("/dashboard/kpis"),
+              apiFetch("/dashboard/alerts"),
+              apiFetch("/dashboard/resources"),
+              apiFetch("/prediction/forecast?days=14"),
+              apiFetch("/outbreak/trends"),
+            ]);
+            setKpis(k);
+            setAlerts(a);
+            setRes(r);
+            setFc(f);
+            setTrends(t);
+            if (a)
+              onAlertsLoad?.(a.filter((x) => x.severity === "critical").length);
+          })();
+        }, []);
+
+        const inflowData = forecast
+          ? [
+              ...(forecast.actual || []).slice(-30),
+              ...(forecast.predicted || []),
+            ].map((d) => ({
+              date: d.date.slice(5),
+              actual: d.type === "actual" ? d.count : null,
+              predicted: d.type === "predicted" ? d.count : null,
+            }))
+          : [];
+
+        const trendDatasets =
+          trends?.labels?.map((label, i) => {
+            const obj = { month: label };
+            Object.entries(trends.diseases).forEach(([d, vals]) => {
+              obj[d] = vals[i];
+            });
+            return obj;
+          }) || [];
+
+        const diseaseTrendKeys = trends ? Object.keys(trends.diseases) : [];
+
+        return (
+          <div className="section-enter">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5,1fr)",
+                gap: 14,
+                marginBottom: 20,
+              }}
+            >
+              <KpiCard
+                color="blue"
+                Icon={Users}
+                value={n(kpis?.total_admitted)}
+                label="Currently Admitted"
+                badge={kpis?.total_admitted > 2000 ? "↑ High" : undefined}
+                foot={kpis ? `Discharged: ${n(kpis.total_discharged)}` : "—"}
+              />
+              <KpiCard
+                color="red"
+                Icon={Activity}
+                value={kpis ? kpis.bed_occupancy_pct + "%" : "—"}
+                label="Bed Occupancy"
+              />
+              <KpiCard
+                color="green"
+                Icon={Stethoscope}
+                value={n(kpis?.doctors_on_duty)}
+                label="Doctors on Duty"
+              />
+              <KpiCard
+                color="amber"
+                Icon={AlertTriangle}
+                value={n(kpis?.active_alerts)}
+                label="Active Alerts"
+              />
+              <KpiCard
+                color="teal"
+                Icon={Heart}
+                value={n(kpis?.total_discharged)}
+                label="Total Discharged"
+              />
+            </div>
+
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="Patient Inflow + 14-Day Forecast"
+                  sub="Historical admissions with ML prediction"
+                  badge="Live"
+                  bc="blue"
+                />
+                <CT>
+                  {forecast ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <ComposedChart data={inflowData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 10 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="actual"
+                          stroke={CLR.blue}
+                          fill="rgba(37,99,235,0.06)"
+                          strokeWidth={2}
+                          dot={false}
+                          name="Actual"
+                          connectNulls={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="predicted"
+                          stroke={CLR.amber}
+                          strokeWidth={2}
+                          strokeDasharray="6 3"
+                          dot={{ r: 2 }}
+                          name="Predicted"
+                          connectNulls={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin msg="Loading forecast…" />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd
+                  title="Disease Trend (Monthly)"
+                  sub="Top 5 diseases — admission volume"
+                  badge="Trend"
+                  bc="purple"
+                />
+                <CT>
+                  {trends?.labels ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={trendDatasets}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                        {diseaseTrendKeys.map((d, i) => (
+                          <Line
+                            key={d}
+                            type="monotone"
+                            dataKey={d}
+                            stroke={PALETTE[i]}
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin msg="Loading trends…" />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="Disease Alert Feed"
+                  badge={
+                    alerts
+                      ? `${alerts.filter((a) => a.severity === "critical").length} Critical`
+                      : "—"
+                  }
+                  bc="red"
+                />
+                <div style={{ padding: "0 18px" }}>
+                  {alerts ? (
+                    alerts.map((a, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          padding: "12px 0",
+                          borderBottom:
+                            i < alerts.length - 1
+                              ? "1px solid #f1f5f9"
+                              : "none",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 9,
+                            height: 9,
+                            borderRadius: "50%",
+                            background:
+                              a.severity === "critical"
+                                ? CLR.red
+                                : a.severity === "warning"
+                                  ? CLR.amber
+                                  : CLR.blue,
+                            flexShrink: 0,
+                            marginTop: 5,
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 13,
+                              color: "#0f172a",
+                            }}
+                          >
+                            {a.disease} — {a.region}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {n(a.count)} admitted · {a.severity}
+                          </div>
+                        </div>
+                        <Tag
+                          color={
+                            a.severity === "critical"
+                              ? "red"
+                              : a.severity === "warning"
+                                ? "amber"
+                                : "blue"
+                          }
+                        >
+                          {a.severity}
+                        </Tag>
+                      </div>
+                    ))
+                  ) : (
+                    <Spin />
+                  )}
+                </div>
+              </Card>
+
+              <Card>
+                <CardHd
+                  title="Resource Utilisation"
+                  sub="Bed type occupancy"
+                  badge="By Type"
+                  bc="amber"
+                />
+                <CT>
+                  {resources ? (
+                    resources.map((r, i) => (
+                      <div key={i} style={{ marginBottom: 14 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 5,
+                          }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: 500 }}>
+                            {r.bed_type}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: statusClr(r.pct),
+                            }}
+                          >
+                            {r.pct}% · {r.used}/{r.total}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: 8,
+                            background: "#f1f5f9",
+                            borderRadius: 4,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${Math.min(r.pct, 100)}%`,
+                              background: statusClr(r.pct),
+                              borderRadius: 4,
+                              transition: "width 0.6s ease",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: CAPACITY
+      // ─────────────────────────────────────────────
+      function CapacitySection() {
+        const [cities, setCities] = useState(null);
+        const [hospitals, setHospitals] = useState(null);
+        const [kpis, setKpis] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [c, h, k] = await Promise.all([
+              apiFetch("/capacity/by-city"),
+              apiFetch("/capacity/hospitals"),
+              apiFetch("/dashboard/kpis"),
+            ]);
+            setCities(c);
+            setHospitals(h);
+            setKpis(k);
+          })();
+        }, []);
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="Bed & Capacity Management"
+              desc="City-level occupancy and hospital status overview"
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4,1fr)",
+                gap: 14,
+                marginBottom: 20,
+              }}
+            >
+              <KpiCard
+                color="blue"
+                Icon={BarChart2}
+                value={
+                  cities ? n(cities.reduce((s, c) => s + c.total, 0)) : "—"
+                }
+                label="Total Beds"
+              />
+              <KpiCard
+                color="red"
+                Icon={Activity}
+                value={kpis ? kpis.bed_occupancy_pct + "%" : "—"}
+                label="Overall Occupancy"
+              />
+              <KpiCard
+                color="green"
+                Icon={Users}
+                value={n(kpis?.doctors_on_duty)}
+                label="Doctors on Duty"
+              />
+              <KpiCard
+                color="amber"
+                Icon={Network}
+                value={cities ? cities.length : "—"}
+                label="Active Cities"
+              />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <Card>
+                <CardHd
+                  title="City Bed Occupancy"
+                  sub="Sorted by utilisation %"
+                  badge="Top Cities"
+                  bc="blue"
+                />
+                <CT>
+                  {cities ? (
+                    <ResponsiveContainer
+                      width="100%"
+                      height={Math.max(220, cities.length * 32 + 60)}
+                    >
+                      <BarChart data={cities} layout="vertical">
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#f1f5f9"
+                          horizontal={false}
+                        />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tickFormatter={(v) => v + "%"}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="city"
+                          width={100}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip formatter={(v) => [v + "%", "Occupancy"]} />
+                        <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
+                          {cities.map((c, i) => (
+                            <Cell key={i} fill={statusClr(c.pct)} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHd
+                title="Hospital-Level Table"
+                sub="City × State breakdowns"
+                badge="Detailed"
+                bc="purple"
+              />
+              <div style={{ overflowX: "auto" }}>
+                {hospitals ? (
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: 13,
+                    }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          background: "#f7f9fc",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        {[
+                          "City",
+                          "State",
+                          "Total Beds",
+                          "Admitted",
+                          "Occupancy %",
+                          "Doctors",
+                          "Status",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            style={{
+                              padding: "10px 14px",
+                              textAlign: "left",
+                              fontWeight: 600,
+                              fontSize: 12,
+                              color: "#64748b",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hospitals.map((h, i) => (
+                        <tr
+                          key={i}
+                          style={{ borderBottom: "1px solid #f1f5f9" }}
+                        >
+                          <td style={{ padding: "10px 14px", fontWeight: 600 }}>
+                            {h.City}
+                          </td>
+                          <td
+                            style={{ padding: "10px 14px", color: "#64748b" }}
+                          >
+                            {h.State}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 14px",
+                              fontFamily: "'IBM Plex Mono',monospace",
+                            }}
+                          >
+                            {h.total_beds}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 14px",
+                              fontFamily: "'IBM Plex Mono',monospace",
+                            }}
+                          >
+                            {h.admitted}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 14px",
+                              fontWeight: 600,
+                              color: statusClr(h.occupancy_pct),
+                              fontFamily: "'IBM Plex Mono',monospace",
+                            }}
+                          >
+                            {h.occupancy_pct}%
+                          </td>
+                          <td style={{ padding: "10px 14px" }}>{h.doctors}</td>
+                          <td style={{ padding: "10px 14px" }}>
+                            <Tag
+                              color={
+                                h.status === "Critical"
+                                  ? "red"
+                                  : h.status === "Warning"
+                                    ? "amber"
+                                    : "green"
+                              }
+                            >
+                              {h.status}
+                            </Tag>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <CT>
+                    <Spin />
+                  </CT>
+                )}
+              </div>
+            </Card>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: PREDICTION
+      // ─────────────────────────────────────────────
+      function PredictionSection() {
+        const [forecast, setFc] = useState(null);
+        const [daily, setDaily] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [f, d] = await Promise.all([
+              apiFetch("/prediction/forecast?days=14"),
+              apiFetch("/prediction/daily"),
+            ]);
+            setFc(f);
+            setDaily(d);
+          })();
+        }, []);
+
+        const predCounts = forecast?.predicted?.map((d) => d.count) || [];
+        const allData = forecast
+          ? [...(forecast.actual || []), ...(forecast.predicted || [])].map(
+              (d) => ({
+                date: d.date.slice(5),
+                actual: d.type === "actual" ? d.count : null,
+                predicted: d.type === "predicted" ? d.count : null,
+              }),
+            )
+          : [];
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="Admission Forecasting"
+              desc="Linear regression trained on historical daily admissions"
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: 14,
+                marginBottom: 20,
+              }}
+            >
+              <KpiCard
+                color="blue"
+                Icon={TrendingUp}
+                value={
+                  predCounts.length
+                    ? "+" + n(predCounts.reduce((a, b) => a + b, 0))
+                    : "—"
+                }
+                label="14-Day Predicted Total"
+              />
+              <KpiCard
+                color="amber"
+                Icon={Activity}
+                value={predCounts.length ? n(Math.max(...predCounts)) : "—"}
+                label="Peak Day (Predicted)"
+              />
+              <KpiCard
+                color="green"
+                Icon={BarChart2}
+                value={
+                  forecast ? (forecast.model_r2 * 100).toFixed(1) + "%" : "—"
+                }
+                label="Model R² Score"
+              />
+            </div>
+            <Card>
+              <CardHd
+                title="14-Day Admission Forecast"
+                sub={forecast?.model || "Linear Regression (7-day smoothed)"}
+                badge="Forecast"
+                bc="blue"
+              />
+              <CT>
+                {forecast ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <ComposedChart data={allData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10 }}
+                        interval={Math.floor(allData.length / 14)}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                      <Area
+                        type="monotone"
+                        dataKey="actual"
+                        stroke={CLR.blue}
+                        fill="rgba(37,99,235,0.06)"
+                        strokeWidth={2.5}
+                        dot={false}
+                        name="Actual"
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="predicted"
+                        stroke={CLR.amber}
+                        strokeWidth={2}
+                        strokeDasharray="6 3"
+                        dot={{ r: 3, fill: CLR.amber }}
+                        name="Predicted (14d)"
+                        connectNulls={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Spin msg="Training model…" />
+                )}
+              </CT>
+            </Card>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: OUTBREAK
+      // ─────────────────────────────────────────────
+      function OutbreakSection() {
+        const [cards, setCards] = useState(null);
+        const [trends, setTrends] = useState(null);
+        const [kpis, setKpis] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [c, t, k] = await Promise.all([
+              apiFetch("/outbreak/cards"),
+              apiFetch("/outbreak/trends"),
+              apiFetch("/dashboard/kpis"),
+            ]);
+            setCards(c);
+            setTrends(t);
+            setKpis(k);
+          })();
+        }, []);
+
+        const trendData =
+          trends?.labels?.map((label, i) => {
+            const obj = { month: label };
+            Object.entries(trends.diseases).forEach(([d, vals]) => {
+              obj[d] = vals[i];
+            });
+            return obj;
+          }) || [];
+        const diseaseKeys = trends ? Object.keys(trends.diseases) : [];
+
+        const pieData = kpis
+          ? [
+              { name: "Admitted", value: kpis.total_admitted },
+              { name: "Discharged", value: kpis.total_discharged },
+            ]
+          : [];
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="Outbreak Monitor"
+              desc="Disease surveillance and risk scoring"
+            />
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3,1fr)",
+                gap: 14,
+                marginBottom: 20,
+              }}
+            >
+              {cards
+                ? cards.map((c, i) => (
+                    <Card key={i}>
+                      <div
+                        style={{
+                          padding: "14px 16px",
+                          borderTop: `3px solid ${PALETTE[i % 6]}`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: 14,
+                              color: "#0f172a",
+                            }}
+                          >
+                            {c.disease}
+                          </div>
+                          <Tag
+                            color={
+                              c.level === "critical"
+                                ? "red"
+                                : c.level === "warning"
+                                  ? "amber"
+                                  : "blue"
+                            }
+                          >
+                            {c.level}
+                          </Tag>
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: "'IBM Plex Mono',monospace",
+                            fontSize: 22,
+                            fontWeight: 700,
+                            color: "#0f172a",
+                            marginBottom: 6,
+                          }}
+                        >
+                          {n(c.total)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#64748b",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Top region: {c.top_state}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 6,
+                              background: "#f1f5f9",
+                              borderRadius: 3,
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                width: `${c.risk_score * 10}%`,
+                                background: PALETTE[i % 6],
+                                borderRadius: 3,
+                              }}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: PALETTE[i % 6],
+                            }}
+                          >
+                            Risk {c.risk_score}/10
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                : [0, 1, 2, 3, 4, 5].map((i) => (
+                    <Card key={i}>
+                      <CT>
+                        <Spin />
+                      </CT>
+                    </Card>
+                  ))}
+            </div>
+
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="Disease Trend (Monthly)"
+                  badge="Top 5"
+                  bc="red"
+                />
+                <CT>
+                  {trends?.labels ? (
+                    <ResponsiveContainer width="100%" height={210}>
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                        {diseaseKeys.map((d, i) => (
+                          <Line
+                            key={d}
+                            type="monotone"
+                            dataKey={d}
+                            stroke={PALETTE[i]}
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd
+                  title="Admitted vs Discharged"
+                  badge="Status"
+                  bc="green"
+                />
+                <CT>
+                  {kpis ? (
+                    <ResponsiveContainer width="100%" height={210}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={85}
+                          paddingAngle={4}
+                          dataKey="value"
+                          label={({ name, percent }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
+                          labelLine={false}
+                        >
+                          <Cell fill={CLR.red} />
+                          <Cell fill={CLR.green} />
+                        </Pie>
+                        <Tooltip formatter={(v) => n(v)} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: HEATMAP
+      // ─────────────────────────────────────────────
+      function HeatmapSection() {
+        const [states, setStates] = useState(null);
+
+        useEffect(() => {
+          apiFetch("/heatmap/states").then(setStates);
+        }, []);
+
+        const top8 = states
+          ? [...states].sort((a, b) => b.risk_score - a.risk_score).slice(0, 8)
+          : [];
+        const top10 = states
+          ? [...states].sort((a, b) => b.total - a.total).slice(0, 10)
+          : [];
+
+        const riskColor = (score) =>
+          score >= 70 ? CLR.red : score >= 40 ? CLR.amber : CLR.green;
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="State-Level Disease Heatmap"
+              desc="Patient burden and risk scoring across Indian states"
+            />
+
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="State Risk Grid"
+                  sub="Click a state for details"
+                  badge="All States"
+                  bc="red"
+                />
+                <CT>
+                  {states ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(5,1fr)",
+                        gap: 6,
+                      }}
+                    >
+                      {states.map((s, i) => {
+                        const bg =
+                          s.risk_score >= 70
+                            ? "rgba(254,202,202,0.85)"
+                            : s.risk_score >= 40
+                              ? "rgba(253,230,138,0.85)"
+                              : "rgba(187,247,208,0.85)";
+                        const tc =
+                          s.risk_score >= 70
+                            ? "#991b1b"
+                            : s.risk_score >= 40
+                              ? "#92400e"
+                              : "#166534";
+                        return (
+                          <div
+                            key={i}
+                            title={`${s.State}\nPatients: ${s.total}\nAdmitted: ${s.admitted}\nRisk: ${s.risk_score}/100\nTop Disease: ${s.top_disease}`}
+                            onClick={() =>
+                              alert(
+                                `State: ${s.State}\nTotal Patients: ${n(s.total)}\nAdmitted: ${n(s.admitted)}\nRisk Score: ${s.risk_score}/100\nRisk Level: ${(s.risk_level || "").toUpperCase()}\nTop Disease: ${s.top_disease || "—"}`,
+                              )
+                            }
+                            style={{
+                              background: bg,
+                              borderRadius: 6,
+                              padding: "8px 4px",
+                              textAlign: "center",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: tc,
+                              }}
+                            >
+                              {(s.State || "").slice(0, 6)}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: tc,
+                              }}
+                            >
+                              {s.risk_score}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd title="Risk Ranking" badge="Top 8 States" bc="red" />
+                <div style={{ padding: "12px 18px" }}>
+                  {top8.map((s, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 6,
+                          background: riskColor(s.risk_score) + "22",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: riskColor(s.risk_score),
+                          flexShrink: 0,
+                        }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>
+                          {s.State}
+                        </div>
+                        <div
+                          style={{
+                            height: 4,
+                            background: "#f1f5f9",
+                            borderRadius: 2,
+                            marginTop: 4,
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${s.risk_score}%`,
+                              background: riskColor(s.risk_score),
+                              borderRadius: 2,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'IBM Plex Mono',monospace",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: riskColor(s.risk_score),
+                        }}
+                      >
+                        {s.risk_score}
+                      </div>
+                    </div>
+                  ))}
+                  {!states && <Spin />}
+                </div>
+              </Card>
+            </Grid2>
+
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="Top Disease per State"
+                  badge="Top 8"
+                  bc="amber"
+                />
+                <CT>
+                  {top8.length ? (
+                    <ResponsiveContainer width="100%" height={210}>
+                      <BarChart data={top8}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="State" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                          {top8.map((s, i) => (
+                            <Cell
+                              key={i}
+                              fill={riskColor(s.risk_score) + "cc"}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+              <Card>
+                <CardHd
+                  title="State Patient Volume"
+                  badge="Top 10"
+                  bc="purple"
+                />
+                <CT>
+                  {top10.length ? (
+                    <ResponsiveContainer width="100%" height={210}>
+                      <BarChart data={top10}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="State" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                        <Bar
+                          dataKey="total"
+                          fill={CLR.blue + "99"}
+                          name="Total"
+                          radius={[3, 3, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="admitted"
+                          fill={CLR.red + "99"}
+                          name="Admitted"
+                          radius={[3, 3, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: RESOURCES
+      // ─────────────────────────────────────────────
+      function ResourcesSection() {
+        const [res, setRes] = useState(null);
+        const [dept, setDept] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [r, d] = await Promise.all([
+              apiFetch("/resources/utilisation"),
+              apiFetch("/resources/by-department"),
+            ]);
+            setRes(r);
+            setDept(d);
+          })();
+        }, []);
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="Resource Allocation"
+              desc="Bed utilisation and department workload"
+            />
+
+            <Grid2 style={{ marginBottom: 16 }}>
+              <Card>
+                <CardHd
+                  title="Bed Type Utilisation"
+                  badge="By Type"
+                  bc="amber"
+                />
+                <CT>
+                  {res ? (
+                    <>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 12,
+                          marginBottom: 16,
+                        }}
+                      >
+                        {res.slice(0, 4).map((r, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              textAlign: "center",
+                              padding: 12,
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 22,
+                                fontWeight: 700,
+                                color: PALETTE[i],
+                                fontFamily: "'IBM Plex Mono',monospace",
+                              }}
+                            >
+                              {r.pct}%
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "#64748b",
+                                marginTop: 2,
+                              }}
+                            >
+                              {r.bed_type}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                              {r.used}/{r.total} beds
+                            </div>
+                            <div
+                              style={{
+                                height: 5,
+                                background: "#f1f5f9",
+                                borderRadius: 3,
+                                marginTop: 8,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: "100%",
+                                  width: `${Math.min(r.pct, 100)}%`,
+                                  background: PALETTE[i],
+                                  borderRadius: 3,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {res
+                        .filter((r) => r.pct >= 70)
+                        .map((r, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              background: r.pct >= 85 ? "#fef2f2" : "#fffbeb",
+                              border: `1px solid ${r.pct >= 85 ? CLR.red : CLR.amber}33`,
+                              borderRadius: 8,
+                              padding: "10px 14px",
+                              marginBottom: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: r.pct >= 85 ? CLR.red : CLR.amber,
+                                marginBottom: 4,
+                              }}
+                            >
+                              {r.pct >= 85 ? "Urgent" : "Warning"} —{" "}
+                              {r.bed_type} at {r.pct}%
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                              {r.used} of {r.total} beds occupied.{" "}
+                              {r.pct >= 85
+                                ? "Immediate reallocation required."
+                                : "Monitor closely."}
+                            </div>
+                          </div>
+                        ))}
+                    </>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd title="Utilisation Chart" badge="All Types" bc="blue" />
+                <CT>
+                  {res ? (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={res} layout="vertical">
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#f1f5f9"
+                          horizontal={false}
+                        />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tickFormatter={(v) => v + "%"}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="bed_type"
+                          width={90}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip formatter={(v) => [v + "%", "Utilisation"]} />
+                        <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
+                          {res.map((r, i) => (
+                            <Cell key={i} fill={PALETTE[i % 6]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Spin />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+
+            <Card>
+              <CardHd
+                title="Department Workload"
+                sub="By doctor specialisation"
+                badge="All Departments"
+                bc="purple"
+              />
+              <div style={{ overflowX: "auto" }}>
+                {dept ? (
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: 13,
+                    }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          background: "#f7f9fc",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        {[
+                          "Specialisation",
+                          "Patients",
+                          "Doctors",
+                          "Beds Used",
+                          "Patients/Doctor",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            style={{
+                              padding: "10px 14px",
+                              textAlign: "left",
+                              fontWeight: 600,
+                              fontSize: 12,
+                              color: "#64748b",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dept.map((d, i) => {
+                        const ratio =
+                          d.doctors > 0
+                            ? Math.round(d.patients / d.doctors)
+                            : 0;
+                        return (
+                          <tr
+                            key={i}
+                            style={{ borderBottom: "1px solid #f1f5f9" }}
+                          >
+                            <td
+                              style={{ padding: "10px 14px", fontWeight: 600 }}
+                            >
+                              {d.Doctor_Specialization}
+                            </td>
+                            <td
+                              style={{
+                                padding: "10px 14px",
+                                fontFamily: "'IBM Plex Mono',monospace",
+                              }}
+                            >
+                              {n(d.patients)}
+                            </td>
+                            <td style={{ padding: "10px 14px" }}>
+                              {d.doctors}
+                            </td>
+                            <td style={{ padding: "10px 14px" }}>
+                              {d.beds_used}
+                            </td>
+                            <td
+                              style={{
+                                padding: "10px 14px",
+                                fontWeight: 600,
+                                color:
+                                  ratio > 15
+                                    ? CLR.red
+                                    : ratio > 10
+                                      ? CLR.amber
+                                      : CLR.green,
+                              }}
+                            >
+                              {ratio}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <CT>
+                    <Spin />
+                  </CT>
+                )}
+              </div>
+            </Card>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: SCENARIO
+      // ─────────────────────────────────────────────
+      function ScenarioSection() {
+        const [vals, setVals] = useState({ v1: 30, v2: 15, v3: 30, v4: 2 });
+        const [result, setResult] = useState(null);
+        const timerRef = useRef(null);
+
+        const fetchScenario = useCallback(async () => {
+          const data = await apiFetch(
+            `/scenario/impact?case_increase=${vals.v1}&severe_ratio=${vals.v2}&zones=${vals.v4}`,
+          );
+          setResult(data);
+        }, [vals]);
+
+        useEffect(() => {
+          clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(fetchScenario, 350);
+        }, [vals]);
+
+        const templates = {
+          covid: [30, 15, 30, 2],
+          dengue: [60, 8, 21, 3],
+          mass: [0, 30, 7, 4],
+          flood: [40, 20, 14, 2],
+        };
+
+        const setTemplate = (key) => {
+          const [v1, v2, v3, v4] = templates[key];
+          setVals({ v1, v2, v3, v4 });
+        };
+
+        const surgeData = result
+          ? [
+              { day: "Now", patients: result.current_admitted },
+              {
+                day: "Day 3",
+                patients: Math.round(
+                  result.current_admitted + result.extra_patients * 0.2,
+                ),
+              },
+              {
+                day: "Day 7",
+                patients: Math.round(
+                  result.current_admitted + result.extra_patients * 0.5,
+                ),
+              },
+              {
+                day: "Day 14",
+                patients: Math.round(
+                  result.current_admitted + result.extra_patients * 0.85,
+                ),
+              },
+              {
+                day: "Day 21",
+                patients: Math.round(
+                  result.current_admitted + result.extra_patients,
+                ),
+              },
+              {
+                day: "Day 30",
+                patients: Math.round(
+                  result.current_admitted + result.extra_patients * 1.05,
+                ),
+              },
+            ]
+          : [];
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="Emergency Preparedness Scenarios"
+              desc="What-if simulations — calculated from real patient data"
+            />
+            <Grid2>
+              <Card>
+                <CardHd
+                  title="Scenario Configuration"
+                  badge="Simulation"
+                  bc="purple"
+                />
+                <CT>
+                  <div style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#64748b",
+                        marginBottom: 8,
+                      }}
+                    >
+                      Select Template
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {Object.keys(templates).map((k) => (
+                        <button
+                          key={k}
+                          onClick={() => setTemplate(k)}
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 6,
+                            border: "1px solid #e2e8f0",
+                            background: "#f7f9fc",
+                            cursor: "pointer",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {k === "covid"
+                            ? "COVID Surge"
+                            : k === "dengue"
+                              ? "Dengue"
+                              : k === "mass"
+                                ? "Mass Casualty"
+                                : "Flood"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {[
+                    {
+                      key: "v1",
+                      label: "Case increase (%)",
+                      max: 200,
+                      suffix: "%",
+                    },
+                    {
+                      key: "v2",
+                      label: "Severe ratio (%)",
+                      max: 50,
+                      suffix: "%",
+                    },
+                    {
+                      key: "v3",
+                      label: "Duration (days)",
+                      max: 90,
+                      suffix: "d",
+                    },
+                    { key: "v4", label: "Affected zones", max: 10, suffix: "" },
+                  ].map(({ key, label, max, suffix }) => (
+                    <div key={key} style={{ marginBottom: 14 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: 12, color: "#64748b" }}>
+                          {label}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            fontFamily: "'IBM Plex Mono',monospace",
+                            color: "#0f172a",
+                          }}
+                        >
+                          {vals[key]}
+                          {suffix}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={max}
+                        value={vals[key]}
+                        onChange={(e) =>
+                          setVals((v) => ({ ...v, [key]: +e.target.value }))
+                        }
+                        style={{ width: "100%", accentColor: CLR.blue }}
+                      />
+                    </div>
+                  ))}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd title="Impact Projection" badge="Real-time" bc="red" />
+                <CT>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: 12,
+                      marginBottom: 20,
+                    }}
+                  >
+                    <StatPill
+                      label="Extra Patients"
+                      value={result ? "+" + n(result.extra_patients) : "—"}
+                      color={CLR.red}
+                      bg="#fef2f2"
+                    />
+                    <StatPill
+                      label="ICU Beds Needed"
+                      value={result ? "+" + n(result.icu_beds_needed) : "—"}
+                      color={CLR.amber}
+                      bg="#fffbeb"
+                    />
+                    <StatPill
+                      label="Extra Staff"
+                      value={result ? "+" + n(result.extra_staff) : "—"}
+                      color={CLR.purple}
+                      bg="#f5f3ff"
+                    />
+                  </div>
+                  {result && (
+                    <div
+                      style={{
+                        background:
+                          result.extra_patients > 500 ? "#fef2f2" : "#fffbeb",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        marginBottom: 16,
+                        fontSize: 12,
+                      }}
+                    >
+                      Stress level:{" "}
+                      <strong
+                        style={{
+                          color:
+                            result.extra_patients > 500 ? CLR.red : CLR.amber,
+                        }}
+                      >
+                        {result.extra_patients > 1000
+                          ? "CRITICAL"
+                          : result.extra_patients > 500
+                            ? "HIGH"
+                            : "MODERATE"}
+                      </strong>{" "}
+                      · Surge beds needed:{" "}
+                      <strong>
+                        {n(Math.round(result.extra_patients * 0.6))}
+                      </strong>
+                    </div>
+                  )}
+                  {surgeData.length > 0 && (
+                    <ResponsiveContainer width="100%" height={180}>
+                      <AreaChart data={surgeData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip />
+                        <Area
+                          type="monotone"
+                          dataKey="patients"
+                          stroke={CLR.red}
+                          fill="rgba(220,38,38,0.08)"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+
+            <Card>
+              <CardHd
+                title="Auto-Generated Preparedness Plan"
+                badge="AI Recommended"
+                bc="green"
+              />
+              <CT>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: 16,
+                  }}
+                >
+                  {[
+                    {
+                      phase: "Day 1–3 · Immediate",
+                      color: CLR.blue,
+                      items: [
+                        "Activate surge protocols across all zones",
+                        "Pre-position ICU reserves at risk sites",
+                        "Alert all zone hospitals via MediSight",
+                        "Mobilise reserve medical staff",
+                        "Emergency drug procurement",
+                      ],
+                    },
+                    {
+                      phase: "Day 4–14 · Short-Term",
+                      color: CLR.amber,
+                      items: [
+                        "Activate overflow facilities",
+                        "Set up field hospitals if needed",
+                        "Inter-hospital patient transfers",
+                        "Deploy community screening camps",
+                        "Issue public health advisories",
+                      ],
+                    },
+                    {
+                      phase: "Day 15+ · Sustained",
+                      color: CLR.purple,
+                      items: [
+                        "Continuous ML monitoring",
+                        "Dynamic resource reallocation",
+                        "Government & ICMR reporting",
+                        "Vaccination drives if indicated",
+                        "Post-surge after-action review",
+                      ],
+                    },
+                  ].map(({ phase, color, items }) => (
+                    <div key={phase}>
+                      <div
+                        style={{
+                          background: color + "18",
+                          border: `1px solid ${color}33`,
+                          borderRadius: 8,
+                          padding: "6px 12px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color,
+                          marginBottom: 10,
+                        }}
+                      >
+                        {phase}
+                      </div>
+                      {items.map((item, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "flex-start",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              background: color,
+                              flexShrink: 0,
+                              marginTop: 5,
+                            }}
+                          />
+                          <div style={{ fontSize: 12, color: "#334155" }}>
+                            {item}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </CT>
+            </Card>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // SECTION: ML INTELLIGENCE
+      // ─────────────────────────────────────────────
+      function MLSection() {
+        const [m1, setM1] = useState(null);
+        const [m2, setM2] = useState(null);
+        const [m3, setM3] = useState(null);
+        const [m4, setM4] = useState(null);
+        const [m5, setM5] = useState(null);
+        const [m6, setM6] = useState(null);
+        const [m7, setM7] = useState(null);
+        const [m8, setM8] = useState(null);
+        const [m9, setM9] = useState(null);
+        const [m10, setM10] = useState(null);
+        const [m11, setM11] = useState(null);
+        const [m12, setM12] = useState(null);
+        const [m5Disease, setM5Disease] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            const [a, b, c, d, e, f, g, h, j, k, l, m] = await Promise.all([
+              apiFetch("/prediction/forecast?days=14"),
+              apiFetch("/ml/disease-risk"),
+              apiFetch("/ml/anomalies"),
+              apiFetch("/ml/clusters?k=4"),
+              apiFetch("/ml/bed-demand?days=14&top_n=5"),
+              apiFetch("/ml/workload?days=14"),
+              apiFetch("/ml/outbreak-warning?window=7&z_threshold=2.0"),
+              apiFetch("/ml/readmission"),
+              apiFetch("/ml/survival"),
+              apiFetch("/ml/cost-prediction"),
+              apiFetch(
+                "/ml/monte-carlo?case_increase=30&severe_ratio=15&zones=2",
+              ),
+              apiFetch("/ml/symptom-classifier"),
+            ]);
+            setM1(a);
+            setM2(b);
+            setM3(c);
+            setM4(d);
+            setM5(e);
+            setM6(f);
+            setM7(g);
+            setM8(h);
+            setM9(j);
+            setM10(k);
+            setM11(l);
+            setM12(m);
+            if (e?.diseases) setM5Disease(Object.keys(e.diseases)[0]);
+          })();
+        }, []);
+
+        const m1Data = m1
+          ? [...(m1.actual || []), ...(m1.predicted || [])].map((d) => ({
+              date: d.date.slice(5),
+              actual: d.type === "actual" ? d.count : null,
+              predicted: d.type === "predicted" ? d.count : null,
+            }))
+          : [];
+        const m1PredCounts = m1?.predicted?.map((d) => d.count) || [];
+
+        const normalData =
+          m3?.normal?.map((d) => ({
+            date: d.date.slice(5),
+            count: d.count,
+            score: d.score,
+          })) || [];
+        const anomData =
+          m3?.anomalies?.map((d) => ({
+            date: d.date.slice(5),
+            count: d.count,
+            score: d.score,
+          })) || [];
+
+        const m5Diseases = m5?.diseases ? Object.keys(m5.diseases) : [];
+        const activeDis = m5Disease || m5Diseases[0];
+        const m5ChartData =
+          activeDis && m5?.diseases?.[activeDis]?.forecast
+            ? m5.diseases[activeDis].forecast.map((f) => ({
+                date: f.date.slice(5),
+                beds: f.beds_needed,
+              }))
+            : [];
+
+        const m6Specs = m6?.specializations
+          ? Object.keys(m6.specializations)
+          : [];
+        const m6ChartData = m6Specs.length
+          ? m6.specializations[m6Specs[0]].daily_forecast.map((f, i) => {
+              const obj = { date: f.date.slice(5) };
+              m6Specs.forEach((s) => {
+                obj[s] = m6.specializations[s].daily_forecast[i]?.patients || 0;
+              });
+              return obj;
+            })
+          : [];
+
+        const MODEL_REGISTRY = [
+          { n: 1, label: "Prophet", sub: "Admission Forecast", color: "blue" },
+          { n: 2, label: "GB + SHAP", sub: "Disease Risk", color: "green" },
+          {
+            n: 3,
+            label: "Isolation Forest",
+            sub: "Anomaly Detection",
+            color: "amber",
+          },
+          { n: 4, label: "K-Means", sub: "Patient Clusters", color: "purple" },
+          { n: 5, label: "Prophet×Disease", sub: "Bed Demand", color: "teal" },
+          {
+            n: 6,
+            label: "Prophet×Spec",
+            sub: "Doctor Workload",
+            color: "purple",
+          },
+          {
+            n: 7,
+            label: "Z-Score + SEIR",
+            sub: "Outbreak Warning",
+            color: "red",
+          },
+          { n: 8, label: "XGBoost", sub: "Readmission Predict", color: "blue" },
+          {
+            n: 9,
+            label: "Kaplan-Meier+Cox",
+            sub: "Survival Analysis",
+            color: "teal",
+          },
+          {
+            n: 10,
+            label: "Random Forest",
+            sub: "Cost Prediction",
+            color: "green",
+          },
+          {
+            n: 11,
+            label: "Monte Carlo",
+            sub: "Scenario Simulation",
+            color: "amber",
+          },
+          {
+            n: 12,
+            label: "TF-IDF + LR",
+            sub: "Symptom Classifier",
+            color: "purple",
+          },
+        ];
+
+        return (
+          <div className="section-enter">
+            <SectionHd
+              title="ML Intelligence Suite — All 12 Models"
+              desc="Every machine learning model powering MediSight — trained on your patient data"
+            />
+
+            <Card style={{ marginBottom: 20 }}>
+              <div
+                style={{
+                  padding: "16px 20px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(6,1fr)",
+                  gap: 10,
+                }}
+              >
+                {MODEL_REGISTRY.map(({ n: num, label, sub, color }) => (
+                  <div
+                    key={num}
+                    style={{
+                      textAlign: "center",
+                      padding: "10px 6px",
+                      borderRadius: 8,
+                      background: LT[color] || "#f1f5f9",
+                      border: `1px solid ${CLR[color]}33`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: CLR[color],
+                        letterSpacing: 0.5,
+                        marginBottom: 3,
+                      }}
+                    >
+                      MODEL {num}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#334155",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}
+                    >
+                      {sub}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Grid2 style={{ marginBottom: 20 }}>
+              <Card>
+                <CardHd
+                  title="Model 1 — Linear Regression · Admission Forecast"
+                  sub="Smoothed 7-day rolling avg · 14-day forward prediction"
+                  badge="Linear Regression"
+                  bc="blue"
+                />
+                <CT>
+                  {m1 ? (
+                    <>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 12,
+                          flexWrap: "wrap",
+                          marginBottom: 14,
+                        }}
+                      >
+                        <StatPill
+                          label="R² Score"
+                          value={(m1.model_r2 * 100).toFixed(1) + "%"}
+                          color={CLR.blue}
+                          bg={LT.blue}
+                        />
+                        <StatPill
+                          label="Peak Forecast"
+                          value={
+                            m1PredCounts.length
+                              ? n(Math.max(...m1PredCounts))
+                              : "—"
+                          }
+                          color={CLR.amber}
+                          bg={LT.amber}
+                        />
+                        <StatPill
+                          label="14d Total"
+                          value={
+                            "+" + n(m1PredCounts.reduce((a, b) => a + b, 0))
+                          }
+                          color={CLR.green}
+                          bg={LT.green}
+                        />
+                      </div>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <ComposedChart data={m1Data}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#f1f5f9"
+                          />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 9 }}
+                            interval={Math.floor(m1Data.length / 10)}
+                          />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Legend
+                            iconSize={10}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="actual"
+                            stroke={CLR.blue}
+                            fill="rgba(37,99,235,0.06)"
+                            strokeWidth={2}
+                            dot={false}
+                            name="Actual"
+                            connectNulls={false}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="predicted"
+                            stroke={CLR.amber}
+                            strokeWidth={2}
+                            strokeDasharray="5 3"
+                            dot={{ r: 2 }}
+                            name="Predicted"
+                            connectNulls={false}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </>
+                  ) : (
+                    <Spin msg="Training model…" />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd
+                  title="Model 2 — Gradient Boosting · Disease Risk"
+                  sub="Predicts ICU admission risk (High/Low) — no data leakage"
+                  badge="Gradient Boosting"
+                  bc="green"
+                />
+                <CT>
+                  {m2 ? (
+                    <>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          marginBottom: 14,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <StatPill
+                          label="Test Accuracy"
+                          value={m2.accuracy_pct + "%"}
+                          color={CLR.green}
+                          bg={LT.green}
+                        />
+                        <StatPill
+                          label="CV Accuracy (5-fold)"
+                          value={m2.cv_accuracy_pct + "%"}
+                          color={CLR.teal}
+                          bg={LT.teal}
+                        />
+                      </div>
+                      {m2.note && (
+                        <div
+                          style={{
+                            background: "#f0fdf4",
+                            border: "1px solid #bbf7d0",
+                            borderRadius: 6,
+                            padding: "7px 12px",
+                            marginBottom: 12,
+                            fontSize: 11.5,
+                            color: "#166534",
+                          }}
+                        >
+                          ℹ {m2.note}
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#334155",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Feature Importance (%)
+                      </div>
+                      {Object.entries(m2.feature_importance)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([k, v]) => (
+                          <div
+                            key={k}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 6,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 90,
+                                fontSize: 11,
+                                color: "#64748b",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {k}
+                            </div>
+                            <div
+                              style={{
+                                flex: 1,
+                                background: "#f1f5f9",
+                                borderRadius: 4,
+                                height: 8,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  height: "100%",
+                                  width: `${Math.min(v, 100)}%`,
+                                  background: CLR.green,
+                                  borderRadius: 4,
+                                  transition: "width 0.6s ease",
+                                }}
+                              />
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: "#334155",
+                                width: 36,
+                                textAlign: "right",
+                              }}
+                            >
+                              {v}%
+                            </div>
+                          </div>
+                        ))}
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#334155",
+                          margin: "14px 0 8px",
+                        }}
+                      >
+                        Top Disease ICU Risk
+                      </div>
+                      <div style={{ maxHeight: 130, overflowY: "auto" }}>
+                        {m2.disease_risk.map((d, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "5px 0",
+                              borderBottom: "1px solid #f1f5f9",
+                              fontSize: 12,
+                            }}
+                          >
+                            <div style={{ fontWeight: 500 }}>{d.disease}</div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <span style={{ color: CLR.red }}>
+                                {d.high_pct}% ICU
+                              </span>
+                              <span style={{ color: "#94a3b8" }}>
+                                {n(d.total)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <Spin msg="Training classifier…" />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+
+            <Grid2 style={{ marginBottom: 20 }}>
+              <Card>
+                <CardHd
+                  title="Model 3 — Isolation Forest · Anomaly Detection"
+                  sub="Detects abnormal admission spikes · contamination=0.08"
+                  badge="Isolation Forest"
+                  bc="amber"
+                />
+                <CT>
+                  {m3 ? (
+                    <>
+                      <div
+                        style={{ display: "flex", gap: 12, marginBottom: 14 }}
+                      >
+                        <StatPill
+                          label="Anomaly Days"
+                          value={m3.anomaly_days}
+                          color={CLR.red}
+                          bg={LT.red}
+                        />
+                        <StatPill
+                          label="Total Days"
+                          value={m3.total_days}
+                          color={CLR.green}
+                          bg={LT.green}
+                        />
+                        <StatPill
+                          label="Rate"
+                          value={
+                            m3.total_days
+                              ? (
+                                  (m3.anomaly_days / m3.total_days) *
+                                  100
+                                ).toFixed(1) + "%"
+                              : "—"
+                          }
+                          color={CLR.amber}
+                          bg={LT.amber}
+                        />
+                      </div>
+                      <ResponsiveContainer width="100%" height={190}>
+                        <ScatterChart
+                          margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#f1f5f9"
+                          />
+                          <XAxis
+                            dataKey="date"
+                            type="category"
+                            tick={{ fontSize: 9 }}
+                            interval={Math.floor(normalData.length / 10)}
+                            name="Date"
+                          />
+                          <YAxis
+                            dataKey="count"
+                            tick={{ fontSize: 10 }}
+                            name="Admissions"
+                          />
+                          <Tooltip
+                            cursor={{ strokeDasharray: "3 3" }}
+                            formatter={(v, n) => [v, n]}
+                          />
+                          <Legend
+                            iconSize={10}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                          <Scatter
+                            name="Normal"
+                            data={normalData}
+                            fill={CLR.green}
+                            fillOpacity={0.5}
+                            r={3}
+                          />
+                          <Scatter
+                            name="Anomaly"
+                            data={anomData}
+                            fill={CLR.red}
+                            fillOpacity={0.9}
+                            r={6}
+                            shape="triangle"
+                          />
+                        </ScatterChart>
+                      </ResponsiveContainer>
+                    </>
+                  ) : (
+                    <Spin msg="Running anomaly scan…" />
+                  )}
+                </CT>
+              </Card>
+
+              <Card>
+                <CardHd
+                  title="Model 4 — K-Means · Patient Clustering"
+                  sub="4 patient segments by age, disease, bed type & visit type"
+                  badge="K-Means"
+                  bc="purple"
+                />
+                <CT>
+                  {m4 ? (
+                    <>
+                      <div
+                        style={{ display: "flex", gap: 12, marginBottom: 14 }}
+                      >
+                        <StatPill
+                          label="Clusters (k)"
+                          value={m4.k}
+                          color={CLR.purple}
+                          bg={LT.purple}
+                        />
+                        <StatPill
+                          label="Inertia"
+                          value={n(Math.round(m4.inertia))}
+                          color="#64748b"
+                          bg="#f7f9fc"
+                        />
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 10,
+                        }}
+                      >
+                        {m4.profiles.map((p, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 8,
+                              padding: 12,
+                              borderTop: `3px solid ${PALETTE[i % 6]}`,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: PALETTE[i % 6],
+                                marginBottom: 6,
+                              }}
+                            >
+                              {p.label}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Size:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {n(p.size)} patients
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Avg age:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {p.avg_age}yr
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Top disease:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {p.top_disease}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 6,
+                              }}
+                            >
+                              Bed type:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {p.top_bed_type}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                background: LT.red,
+                                borderRadius: 4,
+                                padding: "3px 8px",
+                                fontSize: 11,
+                                color: CLR.red,
+                                fontWeight: 600,
+                                display: "inline-block",
+                              }}
+                            >
+                              {p.admitted_pct}% admitted
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <Spin msg="Clustering patients…" />
+                  )}
+                </CT>
+              </Card>
+            </Grid2>
+
+            <Card style={{ marginBottom: 20 }}>
+              <CardHd
+                title="Model 5 — Linear Regression × Disease · Bed Demand Forecast"
+                sub="Separate regression model per disease · forecasts beds needed over next 14 days"
+                badge="Per-Disease LinReg"
+                bc="teal"
+              />
+              <CT>
+                {m5 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      {m5Diseases.map((d, i) => {
+                        const info = m5.diseases[d];
+                        return (
+                          <button
+                            key={d}
+                            onClick={() => setM5Disease(d)}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 20,
+                              cursor: "pointer",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background:
+                                activeDis === d ? PALETTE[i % 6] : "#f7f9fc",
+                              color: activeDis === d ? "#fff" : "#64748b",
+                              border: `1px solid ${activeDis === d ? PALETTE[i % 6] : "#e2e8f0"}`,
+                              fontFamily: "inherit",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {d}{" "}
+                            <span style={{ opacity: 0.75 }}>
+                              ▸ {info.trend}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Grid2>
+                      <div>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <LineChart data={m5ChartData}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f1f5f9"
+                            />
+                            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                            <YAxis
+                              tick={{ fontSize: 10 }}
+                              label={{
+                                value: "Beds Needed",
+                                angle: -90,
+                                position: "insideLeft",
+                                style: { fontSize: 10 },
+                              }}
+                            />
+                            <Tooltip />
+                            <Line
+                              type="monotone"
+                              dataKey="beds"
+                              stroke={CLR.teal}
+                              strokeWidth={2.5}
+                              dot={{ r: 3 }}
+                              name="Beds Needed"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 10,
+                          alignContent: "start",
+                        }}
+                      >
+                        {m5Diseases.map((d, i) => {
+                          const info = m5.diseases[d];
+                          const trendClr =
+                            info.trend === "rising"
+                              ? CLR.red
+                              : info.trend === "falling"
+                                ? CLR.green
+                                : CLR.amber;
+                          return (
+                            <div
+                              key={d}
+                              style={{
+                                border: "1px solid #e2e8f0",
+                                borderRadius: 8,
+                                padding: 12,
+                                borderTop: `3px solid ${PALETTE[i % 6]}`,
+                                cursor: "pointer",
+                              }}
+                              onClick={() => setM5Disease(d)}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#0f172a",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                {d}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#64748b" }}>
+                                Avg beds/day:{" "}
+                                <strong>{info.historical_avg}</strong>
+                              </div>
+                              <div style={{ fontSize: 11, color: "#64748b" }}>
+                                R²: <strong>{info.r2}</strong>
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: trendClr,
+                                }}
+                              >
+                                ▸ {info.trend.toUpperCase()}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Grid2>
+                  </>
+                ) : (
+                  <Spin msg="Training per-disease models…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginBottom: 20 }}>
+              <CardHd
+                title="Model 6 — Linear Regression × Specialization · Doctor Workload"
+                sub="One regression model per specialization · projects patient load per doctor"
+                badge="Per-Spec LinReg"
+                bc="purple"
+              />
+              <CT>
+                {m6 ? (
+                  <>
+                    <div style={{ marginBottom: 16 }}>
+                      <ResponsiveContainer width="100%" height={240}>
+                        <LineChart data={m6ChartData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#f1f5f9"
+                          />
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                          <YAxis
+                            tick={{ fontSize: 10 }}
+                            label={{
+                              value: "Patients / Day",
+                              angle: -90,
+                              position: "insideLeft",
+                              style: { fontSize: 10 },
+                            }}
+                          />
+                          <Tooltip />
+                          <Legend
+                            iconSize={10}
+                            wrapperStyle={{ fontSize: 11 }}
+                          />
+                          {m6Specs.map((s, i) => (
+                            <Line
+                              key={s}
+                              type="monotone"
+                              dataKey={s}
+                              stroke={PALETTE[i % 6]}
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill,minmax(200px,1fr))",
+                        gap: 12,
+                      }}
+                    >
+                      {m6Specs.map((s, i) => {
+                        const info = m6.specializations[s];
+                        const riskClr =
+                          info.overload_risk === "High"
+                            ? CLR.red
+                            : info.overload_risk === "Medium"
+                              ? CLR.amber
+                              : CLR.green;
+                        return (
+                          <div
+                            key={s}
+                            style={{
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 8,
+                              padding: 12,
+                              borderLeft: `4px solid ${PALETTE[i % 6]}`,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#0f172a",
+                                marginBottom: 6,
+                              }}
+                            >
+                              {s}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Doctors:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {info.doctor_count}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              Currently admitted:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {n(info.current_admitted)}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 3,
+                              }}
+                            >
+                              14d forecast:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {n(info.forecast_total)}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 8,
+                              }}
+                            >
+                              Avg/doc/day:{" "}
+                              <strong style={{ color: "#0f172a" }}>
+                                {info.avg_daily_per_doc}
+                              </strong>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: riskClr,
+                                background: riskClr + "18",
+                                borderRadius: 4,
+                                padding: "3px 8px",
+                                display: "inline-block",
+                              }}
+                            >
+                              {info.overload_risk} Overload Risk
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <Spin msg="Forecasting doctor workloads…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card>
+              <CardHd
+                title="Model 7 — Z-Score Detector · Outbreak Early Warning"
+                sub="7-week rolling z-score per disease · flags statistically abnormal weekly case spikes"
+                badge="Z-Score"
+                bc="red"
+              />
+              <CT>
+                {m7 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        marginBottom: 16,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <StatPill
+                        label="Active Warnings"
+                        value={m7.active_warnings}
+                        color={CLR.red}
+                        bg={LT.red}
+                      />
+                      <StatPill
+                        label="Z-Threshold"
+                        value="2.0σ"
+                        color="#64748b"
+                        bg="#f7f9fc"
+                      />
+                      <StatPill
+                        label="Window"
+                        value="7 weeks"
+                        color="#64748b"
+                        bg="#f7f9fc"
+                      />
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          fontSize: 13,
+                        }}
+                      >
+                        <thead>
+                          <tr
+                            style={{
+                              background: "#f7f9fc",
+                              borderBottom: "1px solid #e2e8f0",
+                            }}
+                          >
+                            {[
+                              "Disease",
+                              "Latest Week",
+                              "Cases",
+                              "Z-Score",
+                              "Baseline Mean",
+                              "Alert",
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                style={{
+                                  padding: "10px 14px",
+                                  textAlign: "left",
+                                  fontWeight: 600,
+                                  fontSize: 12,
+                                  color: "#64748b",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {m7.diseases.map((d, i) => {
+                            const lvlClr =
+                              d.alert_level === "critical"
+                                ? CLR.red
+                                : d.alert_level === "warning"
+                                  ? CLR.amber
+                                  : CLR.green;
+                            return (
+                              <tr
+                                key={i}
+                                style={{ borderBottom: "1px solid #f1f5f9" }}
+                              >
+                                <td
+                                  style={{
+                                    padding: "10px 14px",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {d.disease}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "10px 14px",
+                                    color: "#64748b",
+                                    fontFamily: "'IBM Plex Mono',monospace",
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  {d.latest_week}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "10px 14px",
+                                    fontFamily: "'IBM Plex Mono',monospace",
+                                  }}
+                                >
+                                  {n(d.cases)}
+                                </td>
+                                <td
+                                  style={{
+                                    padding: "10px 14px",
+                                    fontWeight: 700,
+                                    color: lvlClr,
+                                    fontFamily: "'IBM Plex Mono',monospace",
+                                  }}
+                                >
+                                  {d.z_score > 0 ? "+" : ""}
+                                  {d.z_score}
+                                </td>
+                                <td style={{ padding: "10px 14px" }}>
+                                  {d.mean_baseline}
+                                </td>
+                                <td style={{ padding: "10px 14px" }}>
+                                  <span
+                                    style={{
+                                      padding: "3px 10px",
+                                      borderRadius: 20,
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      background: lvlClr + "18",
+                                      color: lvlClr,
+                                    }}
+                                  >
+                                    {d.alert_level.toUpperCase()}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <Spin msg="Running z-score analysis…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginTop: 20 }}>
+              <CardHd
+                title="Model 8 — XGBoost · Readmission Prediction"
+                sub="Predicts 30-day readmission risk from patient features"
+                badge="XGBoost"
+                bc="blue"
+              />
+              <CT>
+                {m8 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <StatPill
+                        label="Accuracy"
+                        value={m8.accuracy_pct + "%"}
+                        color={CLR.blue}
+                        bg={LT.blue}
+                      />
+                      <StatPill
+                        label="CV Accuracy"
+                        value={m8.cv_accuracy_pct + "%"}
+                        color={CLR.teal}
+                        bg={LT.teal}
+                      />
+                      <StatPill
+                        label="Overall Readmit Rate"
+                        value={m8.overall_readmit_rate + "%"}
+                        color={CLR.amber}
+                        bg={LT.amber}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 12,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {["high", "medium", "low"].map((level) => {
+                        const colors = {
+                          high: CLR.red,
+                          medium: CLR.amber,
+                          low: CLR.green,
+                        };
+                        const bgs = {
+                          high: LT.red,
+                          medium: LT.amber,
+                          low: LT.green,
+                        };
+                        const val = m8.risk_distribution?.[level] ?? 0;
+                        return (
+                          <div
+                            key={level}
+                            style={{
+                              background: bgs[level],
+                              border: `1px solid ${colors[level]}33`,
+                              borderRadius: 8,
+                              padding: "10px 14px",
+                              textAlign: "center",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 10,
+                                color: colors[level],
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                marginBottom: 4,
+                              }}
+                            >
+                              {level} Risk
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 22,
+                                fontWeight: 700,
+                                color: colors[level],
+                                fontFamily: "'IBM Plex Mono',monospace",
+                              }}
+                            >
+                              {n(val)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <Grid2>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Feature Importance (Top 6)
+                        </div>
+                        {(m8.feature_importance || [])
+                          .slice(0, 6)
+                          .map(([feat, val], i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginBottom: 6,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 100,
+                                  fontSize: 11,
+                                  color: "#64748b",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {feat}
+                              </div>
+                              <div
+                                style={{
+                                  flex: 1,
+                                  background: "#f1f5f9",
+                                  borderRadius: 4,
+                                  height: 8,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    width: `${Math.min(val, 100)}%`,
+                                    background: CLR.blue,
+                                    borderRadius: 4,
+                                  }}
+                                />
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#334155",
+                                  width: 36,
+                                  textAlign: "right",
+                                }}
+                              >
+                                {val}%
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Readmission Rate by Disease
+                        </div>
+                        <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                              fontSize: 12,
+                            }}
+                          >
+                            <thead>
+                              <tr
+                                style={{
+                                  background: "#f7f9fc",
+                                  borderBottom: "1px solid #e2e8f0",
+                                }}
+                              >
+                                <th
+                                  style={{
+                                    padding: "6px 10px",
+                                    textAlign: "left",
+                                    fontWeight: 600,
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  Disease
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "6px 10px",
+                                    textAlign: "right",
+                                    fontWeight: 600,
+                                    color: "#64748b",
+                                  }}
+                                >
+                                  Readmit Rate
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(m8.disease_readmit || []).map((d, i) => (
+                                <tr
+                                  key={i}
+                                  style={{ borderBottom: "1px solid #f1f5f9" }}
+                                >
+                                  <td
+                                    style={{
+                                      padding: "6px 10px",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {d.disease}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "6px 10px",
+                                      textAlign: "right",
+                                      fontWeight: 700,
+                                      color:
+                                        d.readmit_rate > 30
+                                          ? CLR.red
+                                          : CLR.amber,
+                                      fontFamily: "'IBM Plex Mono',monospace",
+                                    }}
+                                  >
+                                    {d.readmit_rate}%
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </Grid2>
+                  </>
+                ) : (
+                  <Spin msg="Training XGBoost model…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginTop: 20 }}>
+              <CardHd
+                title="Model 9 — Kaplan-Meier + Cox · Survival Analysis"
+                sub="Length-of-stay survival curve and Cox proportional hazards regression"
+                badge="Survival Analysis"
+                bc="teal"
+              />
+              <CT>
+                {m9 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <StatPill
+                        label="Median LOS (days)"
+                        value={m9.median_los}
+                        color={CLR.teal}
+                        bg={LT.teal}
+                      />
+                      <StatPill
+                        label="Total Patients"
+                        value={n(m9.total_patients)}
+                        color={CLR.blue}
+                        bg={LT.blue}
+                      />
+                      <StatPill
+                        label="Cox Concordance"
+                        value={m9.cox?.concordance}
+                        color={CLR.green}
+                        bg={LT.green}
+                      />
+                    </div>
+                    <Grid2>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Overall Survival Curve (KM)
+                        </div>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <AreaChart
+                            data={(m9.overall_curve || []).map((d) => ({
+                              day: d.day,
+                              survival: (d.survival_prob * 100).toFixed(1),
+                            }))}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f1f5f9"
+                            />
+                            <XAxis
+                              dataKey="day"
+                              tick={{ fontSize: 10 }}
+                              label={{
+                                value: "Days",
+                                position: "insideBottom",
+                                offset: -2,
+                                style: { fontSize: 10 },
+                              }}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 10 }}
+                              domain={[0, 100]}
+                              tickFormatter={(v) => v + "%"}
+                            />
+                            <Tooltip formatter={(v) => [v + "%", "Survival"]} />
+                            <Area
+                              type="monotone"
+                              dataKey="survival"
+                              stroke={CLR.teal}
+                              fill="rgba(13,148,136,0.08)"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Cox PH Regression — Covariates
+                        </div>
+                        <div style={{ overflowX: "auto" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                              fontSize: 12,
+                            }}
+                          >
+                            <thead>
+                              <tr
+                                style={{
+                                  background: "#f7f9fc",
+                                  borderBottom: "1px solid #e2e8f0",
+                                }}
+                              >
+                                {[
+                                  "Covariate",
+                                  "HR (exp_coef)",
+                                  "p-value",
+                                  "Sig",
+                                ].map((h) => (
+                                  <th
+                                    key={h}
+                                    style={{
+                                      padding: "6px 10px",
+                                      textAlign: "left",
+                                      fontWeight: 600,
+                                      color: "#64748b",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(m9.cox?.summary || []).map((row, i) => (
+                                <tr
+                                  key={i}
+                                  style={{ borderBottom: "1px solid #f1f5f9" }}
+                                >
+                                  <td
+                                    style={{
+                                      padding: "6px 10px",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {row.covariate}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "6px 10px",
+                                      fontFamily: "'IBM Plex Mono',monospace",
+                                      color:
+                                        row.exp_coef > 1 ? CLR.red : CLR.green,
+                                    }}
+                                  >
+                                    {row.exp_coef}
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "6px 10px",
+                                      fontFamily: "'IBM Plex Mono',monospace",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    {row.p_value}
+                                  </td>
+                                  <td style={{ padding: "6px 10px" }}>
+                                    {row.significant ? (
+                                      <span
+                                        style={{
+                                          color: CLR.red,
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: "#94a3b8" }}>
+                                        –
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </Grid2>
+                  </>
+                ) : (
+                  <Spin msg="Running survival analysis…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginTop: 20 }}>
+              <CardHd
+                title="Model 10 — Random Forest · Treatment Cost Prediction"
+                sub="Predicts per-patient treatment cost in INR from clinical features"
+                badge="Random Forest"
+                bc="green"
+              />
+              <CT>
+                {m10 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <StatPill
+                        label="R² × 100"
+                        value={(m10.r2_score * 100).toFixed(1) + "%"}
+                        color={CLR.green}
+                        bg={LT.green}
+                      />
+                      <StatPill
+                        label="MAE (INR)"
+                        value={"₹" + n(Math.round(m10.mae_inr))}
+                        color={CLR.amber}
+                        bg={LT.amber}
+                      />
+                      <StatPill
+                        label="Avg Cost"
+                        value={"₹" + n(Math.round(m10.overall_avg_cost))}
+                        color={CLR.blue}
+                        bg={LT.blue}
+                      />
+                    </div>
+                    <Grid2>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Cost by Disease (Top 8)
+                        </div>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart
+                            data={(m10.disease_cost || []).slice(0, 8)}
+                            layout="vertical"
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f1f5f9"
+                              horizontal={false}
+                            />
+                            <XAxis
+                              type="number"
+                              tick={{ fontSize: 10 }}
+                              tickFormatter={(v) =>
+                                "₹" + (v / 1000).toFixed(0) + "k"
+                              }
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="disease"
+                              width={110}
+                              tick={{ fontSize: 10 }}
+                            />
+                            <Tooltip
+                              formatter={(v) => [
+                                "₹" + n(Math.round(v)),
+                                "Avg Cost",
+                              ]}
+                            />
+                            <Bar
+                              dataKey="avg_cost"
+                              radius={[0, 4, 4, 0]}
+                              fill={CLR.green}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Feature Importance (Top 5)
+                        </div>
+                        {(m10.feature_importance || [])
+                          .slice(0, 5)
+                          .map(([feat, val], i) => (
+                            <div
+                              key={i}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginBottom: 8,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 100,
+                                  fontSize: 11,
+                                  color: "#64748b",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {feat}
+                              </div>
+                              <div
+                                style={{
+                                  flex: 1,
+                                  background: "#f1f5f9",
+                                  borderRadius: 4,
+                                  height: 8,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    width: `${Math.min(val, 100)}%`,
+                                    background: CLR.green,
+                                    borderRadius: 4,
+                                  }}
+                                />
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#334155",
+                                  width: 36,
+                                  textAlign: "right",
+                                }}
+                              >
+                                {val}%
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </Grid2>
+                  </>
+                ) : (
+                  <Spin msg="Training cost model…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginTop: 20 }}>
+              <CardHd
+                title="Model 11 — Monte Carlo · Scenario Simulation"
+                sub="Probabilistic patient surge simulation across N trials"
+                badge="Monte Carlo"
+                bc="amber"
+              />
+              <CT>
+                {m11 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <StatPill
+                        label="Simulations"
+                        value={n(m11.inputs?.n_simulations)}
+                        color="#64748b"
+                        bg="#f7f9fc"
+                      />
+                      <StatPill
+                        label="Overload Prob"
+                        value={m11.system_overload_prob + "%"}
+                        color={CLR.red}
+                        bg={LT.red}
+                      />
+                      <StatPill
+                        label="ICU Shortage Prob"
+                        value={m11.icu_beds_needed?.shortage_prob + "%"}
+                        color={CLR.amber}
+                        bg={LT.amber}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 12,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {[
+                        {
+                          label: "Extra Patients",
+                          key: "extra_patients",
+                          color: CLR.blue,
+                        },
+                        {
+                          label: "ICU Beds Needed",
+                          key: "icu_beds_needed",
+                          color: CLR.red,
+                        },
+                        {
+                          label: "Extra Staff",
+                          key: "extra_staff",
+                          color: CLR.purple,
+                        },
+                      ].map(({ label, key, color }) => {
+                        const d = m11[key] || {};
+                        return (
+                          <div
+                            key={key}
+                            style={{
+                              border: `1px solid ${color}33`,
+                              borderRadius: 8,
+                              padding: "12px 14px",
+                              background: color + "08",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color,
+                                marginBottom: 8,
+                              }}
+                            >
+                              {label}
+                            </div>
+                            {["p10", "p50", "p90"].map((p) => (
+                              <div
+                                key={p}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <span
+                                  style={{ fontSize: 11, color: "#64748b" }}
+                                >
+                                  {p.toUpperCase()}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    fontFamily: "'IBM Plex Mono',monospace",
+                                    color,
+                                  }}
+                                >
+                                  {n(d[p])}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {m11.histogram && (
+                      <>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 8,
+                          }}
+                        >
+                          Simulation Distribution (Extra Patients)
+                        </div>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart data={m11.histogram}>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              stroke="#f1f5f9"
+                            />
+                            <XAxis dataKey="bin" tick={{ fontSize: 9 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip />
+                            <Bar
+                              dataKey="count"
+                              fill={CLR.amber}
+                              radius={[2, 2, 0, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <Spin msg="Running Monte Carlo simulation…" />
+                )}
+              </CT>
+            </Card>
+
+            <Card style={{ marginTop: 20 }}>
+              <CardHd
+                title="Model 12 — TF-IDF + LR · Symptom Disease Classifier"
+                sub="NLP classifier maps symptom text to predicted disease with probability scores"
+                badge="TF-IDF + LR"
+                bc="purple"
+              />
+              <CT>
+                {m12 ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 16,
+                      }}
+                    >
+                      <StatPill
+                        label="Accuracy"
+                        value={m12.accuracy_pct + "%"}
+                        color={CLR.purple}
+                        bg={LT.purple}
+                      />
+                      <StatPill
+                        label="CV Accuracy"
+                        value={m12.cv_accuracy_pct + "%"}
+                        color={CLR.teal}
+                        bg={LT.teal}
+                      />
+                      <StatPill
+                        label="Diseases"
+                        value={m12.num_diseases}
+                        color={CLR.blue}
+                        bg={LT.blue}
+                      />
+                    </div>
+                    <Grid2>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 10,
+                          }}
+                        >
+                          Example Predictions
+                        </div>
+                        {(m12.example_predictions || []).map((ex, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              border: "1px solid #e2e8f0",
+                              borderRadius: 8,
+                              padding: 12,
+                              marginBottom: 10,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#64748b",
+                                marginBottom: 4,
+                              }}
+                            >
+                              Input: <em>{ex.input_symptoms}</em>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                marginBottom: 6,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: CLR.purple,
+                                }}
+                              >
+                                {ex.predicted_disease}
+                              </div>
+                              <Tag color="purple">{ex.confidence}%</Tag>
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>
+                              {(ex.top3_predictions || []).map((p, j) => (
+                                <span key={j} style={{ marginRight: 10 }}>
+                                  {p.disease}{" "}
+                                  <strong style={{ color: "#0f172a" }}>
+                                    {p.prob}%
+                                  </strong>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#334155",
+                            marginBottom: 10,
+                          }}
+                        >
+                          Top Terms per Disease
+                        </div>
+                        <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                          {Object.entries(m12.top_terms_per_disease || {})
+                            .slice(0, 8)
+                            .map(([disease, terms], i) => (
+                              <div key={i} style={{ marginBottom: 12 }}>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: PALETTE[i % 6],
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  {disease}
+                                </div>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 4,
+                                  }}
+                                >
+                                  {(terms || []).map((term, j) => (
+                                    <span
+                                      key={j}
+                                      style={{
+                                        background: Object.values(LT)[i % 6],
+                                        color: PALETTE[i % 6],
+                                        fontSize: 10,
+                                        padding: "2px 7px",
+                                        borderRadius: 12,
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {term}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </Grid2>
+                  </>
+                ) : (
+                  <Spin msg="Training NLP classifier…" />
+                )}
+              </CT>
+            </Card>
+          </div>
+        );
+      }
+
+      // ─────────────────────────────────────────────
+      // MAIN APP
+      // ─────────────────────────────────────────────
+      function App() {
+        const [section, setSection] = useState("dashboard");
+        const [loaded, setLoaded] = useState(new Set(["dashboard"]));
+        const [ticker, setTicker] = useState(null);
+        const [alertCount, setAlertCount] = useState(0);
+        const [time, setTime] = useState(
+          new Date().toLocaleTimeString("en-IN", { hour12: false }),
+        );
+
+        useEffect(() => {
+          const t = setInterval(
+            () =>
+              setTime(
+                new Date().toLocaleTimeString("en-IN", { hour12: false }),
+              ),
+            1000,
+          );
+          return () => clearInterval(t);
+        }, []);
+
+        const navigate = (id) => {
+          setSection(id);
+          setLoaded((prev) => new Set([...prev, id]));
+        };
+
+        const handleAlertsLoad = (alerts) => {
+          if (alerts?.length) {
+            const t = alerts
+              .map(
+                (a) =>
+                  `⚠ ${a.disease} surge in ${a.region} — ${n(a.count)} admitted`,
+              )
+              .join("   |   ");
+            setTicker(t);
+            setAlertCount(
+              alerts.filter((a) => a.severity === "critical").length,
+            );
+          }
+        };
+
+        return (
+          <div
+            style={{
+              display: "flex",
+              minHeight: "100vh",
+              background: "#f0f4f8",
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: 14,
+            }}
+          >
+            <style>{GLOBAL_CSS}</style>
+            <Sidebar
+              active={section}
+              onNav={navigate}
+              alertCount={alertCount}
+            />
+            <main
+              style={{
+                marginLeft: 236,
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: "100vh",
+              }}
+            >
+              <Header section={section} time={time} />
+              <AlertBar ticker={ticker} />
+              <div style={{ padding: "24px 28px", flex: 1 }}>
+                {section === "dashboard" && (
+                  <DashboardSection onAlertsLoad={handleAlertsLoad} />
+                )}
+                {section === "capacity" && loaded.has("capacity") && (
+                  <CapacitySection />
+                )}
+                {section === "prediction" && loaded.has("prediction") && (
+                  <PredictionSection />
+                )}
+                {section === "outbreak" && loaded.has("outbreak") && (
+                  <OutbreakSection />
+                )}
+                {section === "heatmap" && loaded.has("heatmap") && (
+                  <HeatmapSection />
+                )}
+                {section === "resources" && loaded.has("resources") && (
+                  <ResourcesSection />
+                )}
+                {section === "scenario" && loaded.has("scenario") && (
+                  <ScenarioSection />
+                )}
+                {section === "ml" && loaded.has("ml") && <MLSection />}
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

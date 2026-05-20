@@ -1,0 +1,466 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MediSight v3 - Support</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config based on Design System -->
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-container": "#00201d",
+              "on-surface-variant": "#45464d",
+              "secondary-container": "#4069f2",
+              secondary: "#1d4ed8",
+              "tertiary-fixed-dim": "#80d5cb",
+              "on-secondary-fixed-variant": "#0039b5",
+              background: "#f7f9fb",
+              surface: "#f7f9fb",
+              "surface-tint": "#565e74",
+              "primary-fixed": "#dae2fd",
+              "tertiary-fixed": "#9cf2e8",
+              "on-error-container": "#93000a",
+              "surface-container": "#eceef0",
+              "secondary-fixed-dim": "#b7c4ff",
+              "primary-fixed-dim": "#bec6e0",
+              error: "#ba1a1a",
+              "primary-container": "#131b2e",
+              tertiary: "#000000",
+              "outline-variant": "#c6c6cd",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary-container": "#389189",
+              "surface-container-low": "#f2f4f6",
+              "inverse-surface": "#2d3133",
+              "on-error": "#ffffff",
+              "inverse-primary": "#bec6e0",
+              "on-background": "#191c1e",
+              "surface-dim": "#d8dadc",
+              "on-primary-fixed": "#131b2e",
+              "on-tertiary-fixed-variant": "#00504a",
+              "secondary-fixed": "#dce1ff",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "surface-container-highest": "#e0e3e5",
+              "on-secondary-container": "#fffbff",
+              "inverse-on-surface": "#eff1f3",
+              "on-tertiary-fixed": "#00201d",
+              primary: "#000000",
+              "on-secondary-fixed": "#001551",
+              "surface-bright": "#f7f9fb",
+              "on-primary-container": "#7c839b",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "surface-variant": "#e0e3e5",
+              outline: "#76777d",
+              "on-surface": "#191c1e",
+              "error-container": "#ffdad6",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              xl: "32px",
+              xs: "4px",
+              sm: "8px",
+              lg: "24px",
+              gutter: "16px",
+              md: "16px",
+              margin: "24px",
+              base: "4px",
+            },
+            fontFamily: {
+              "label-caps": ["Inter"],
+              "data-lg": ["IBM Plex Mono"],
+              h2: ["Inter"],
+              "data-sm": ["IBM Plex Mono"],
+              h3: ["Inter"],
+              h1: ["Inter"],
+              "data-md": ["IBM Plex Mono"],
+              "body-sm": ["Inter"],
+              "body-md": ["Inter"],
+            },
+            fontSize: {
+              "label-caps": [
+                "11px",
+                { lineHeight: "1", letterSpacing: "0.05em", fontWeight: "700" },
+              ],
+              "data-lg": ["20px", { lineHeight: "1.2", fontWeight: "500" }],
+              h2: [
+                "24px",
+                {
+                  lineHeight: "1.3",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "data-sm": ["12px", { lineHeight: "1.2", fontWeight: "400" }],
+              h3: ["18px", { lineHeight: "1.4", fontWeight: "600" }],
+              h1: [
+                "32px",
+                {
+                  lineHeight: "1.2",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "data-md": ["14px", { lineHeight: "1.2", fontWeight: "500" }],
+              "body-sm": ["13px", { lineHeight: "1.5", fontWeight: "400" }],
+              "body-md": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background text-on-background min-h-screen flex flex-col font-sans"
+  >
+    <!-- TopAppBar Shared Component -->
+    <!-- Executing exact injected styles from JSON while maintaining structural semantics -->
+    <header
+      class="bg-white dark:bg-slate-950 docked full-width top-0 border-b border-b border-slate-200 dark:border-slate-800 flat no shadows flex justify-between items-center w-full px-8 py-4 z-50 sticky top-0"
+    >
+      <div
+        class="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 font-['Inter']"
+      >
+        <a href="/" class="hover:text-secondary transition-colors">MediSight</a>
+      </div>
+      <nav class="hidden md:flex items-center gap-8">
+        <a
+          class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70 font-sans text-sm font-medium tracking-tight px-3 py-2 rounded-DEFAULT"
+          href="/terms"
+        >
+          Terms of Service
+        </a>
+        <a
+          class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70 font-sans text-sm font-medium tracking-tight px-3 py-2 rounded-DEFAULT"
+          href="/privacy"
+        >
+          Privacy Policy
+        </a>
+        <!-- Active State -->
+        <a
+          class="text-blue-700 dark:text-blue-400 border-b-2 border-blue-700 dark:border-blue-400 pb-1 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70 font-sans text-sm font-medium tracking-tight px-3 pt-2"
+          href="/support"
+        >
+          Support
+        </a>
+      </nav>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="flex-1 w-full max-w-7xl mx-auto px-margin py-xl">
+      <!-- Page Header -->
+      <div class="mb-lg">
+        <h1 class="font-h1 text-h1 text-on-surface mb-xs">
+          Institutional Support
+        </h1>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          Submit a high-priority ticket for system anomalies, data integration
+          issues, or clinical workflow interruptions.
+        </p>
+      </div>
+      <!-- Bento Grid Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+        <!-- Primary Form Module -->
+        <div
+          class="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col"
+        >
+          <div class="px-lg py-md border-b border-outline-variant bg-surface">
+            <h2 class="font-h3 text-h3 text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-secondary"
+                >assignment_add</span
+              >
+              Submit a Support Ticket
+            </h2>
+          </div>
+          <div class="p-lg flex flex-col gap-margin">
+            <!-- Row 1: Type & System ID -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+              <div class="flex flex-col gap-sm">
+                <label
+                  class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+                  for="incident-type"
+                  >Incident Type</label
+                >
+                <select
+                  class="bg-surface-container-lowest border border-outline-variant rounded focus:ring-1 focus:ring-secondary focus:border-secondary font-body-md text-body-md text-on-surface w-full p-2 h-10 outline-none transition-colors"
+                  id="incident-type"
+                >
+                  <option>Clinical Workflow Disruption</option>
+                  <option>Data Synchronization Error</option>
+                  <option>Hardware Integration Failure</option>
+                  <option>Account &amp; Access Management</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-sm">
+                <label
+                  class="font-label-caps text-label-caps text-on-surface-variant uppercase flex justify-between"
+                  for="system-id"
+                >
+                  System ID
+                  <span
+                    class="text-outline font-normal lowercase tracking-normal"
+                    >Req. for hardware</span
+                  >
+                </label>
+                <input
+                  class="bg-surface-container-lowest border border-outline-variant rounded focus:ring-1 focus:ring-secondary focus:border-secondary font-data-md text-data-md text-on-surface w-full p-2 h-10 outline-none transition-colors placeholder:text-outline-variant"
+                  id="system-id"
+                  placeholder="e.g. SRV-882-X"
+                  type="text"
+                />
+              </div>
+            </div>
+            <!-- Row 2: Urgency Level -->
+            <div class="flex flex-col gap-sm">
+              <label
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+                >Urgency Level</label
+              >
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+                <!-- Routine -->
+                <label class="cursor-pointer relative">
+                  <input
+                    checked=""
+                    class="peer sr-only"
+                    name="urgency"
+                    type="radio"
+                    value="routine"
+                  />
+                  <div
+                    class="bg-surface-container-lowest border border-outline-variant rounded p-sm flex items-center gap-sm peer-checked:border-secondary peer-checked:bg-primary-fixed hover:bg-surface transition-colors"
+                  >
+                    <span
+                      class="material-symbols-outlined text-outline peer-checked:text-secondary text-sm"
+                      >info</span
+                    >
+                    <div class="flex flex-col">
+                      <span
+                        class="font-body-sm text-body-sm font-medium text-on-surface"
+                        >Routine</span
+                      >
+                      <span
+                        class="font-data-sm text-data-sm text-on-surface-variant"
+                        >24-48h SLA</span
+                      >
+                    </div>
+                  </div>
+                </label>
+                <!-- Elevated -->
+                <label class="cursor-pointer relative">
+                  <input
+                    class="peer sr-only"
+                    name="urgency"
+                    type="radio"
+                    value="elevated"
+                  />
+                  <div
+                    class="bg-surface-container-lowest border border-outline-variant rounded p-sm flex items-center gap-sm peer-checked:border-secondary peer-checked:bg-primary-fixed hover:bg-surface transition-colors"
+                  >
+                    <span
+                      class="material-symbols-outlined text-outline peer-checked:text-secondary text-sm"
+                      >warning</span
+                    >
+                    <div class="flex flex-col">
+                      <span
+                        class="font-body-sm text-body-sm font-medium text-on-surface"
+                        >Elevated</span
+                      >
+                      <span
+                        class="font-data-sm text-data-sm text-on-surface-variant"
+                        >4-8h SLA</span
+                      >
+                    </div>
+                  </div>
+                </label>
+                <!-- Critical -->
+                <label class="cursor-pointer relative">
+                  <input
+                    class="peer sr-only"
+                    name="urgency"
+                    type="radio"
+                    value="critical"
+                  />
+                  <div
+                    class="bg-surface-container-lowest border border-outline-variant rounded p-sm flex items-center gap-sm peer-checked:border-error peer-checked:bg-error-container hover:bg-surface transition-colors"
+                  >
+                    <span
+                      class="material-symbols-outlined text-outline peer-checked:text-error text-sm"
+                      >report</span
+                    >
+                    <div class="flex flex-col">
+                      <span
+                        class="font-body-sm text-body-sm font-medium text-error"
+                        >Critical</span
+                      >
+                      <span class="font-data-sm text-data-sm text-error"
+                        >1h SLA</span
+                      >
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <!-- Row 3: Description -->
+            <div class="flex flex-col gap-sm">
+              <label
+                class="font-label-caps text-label-caps text-on-surface-variant uppercase"
+                for="description"
+                >Description of Event</label
+              >
+              <textarea
+                class="bg-surface-container-lowest border border-outline-variant rounded focus:ring-1 focus:ring-secondary focus:border-secondary font-body-md text-body-md text-on-surface w-full p-3 outline-none transition-colors resize-y placeholder:text-outline-variant"
+                id="description"
+                placeholder="Provide detailed technical context..."
+                rows="5"
+              ></textarea>
+            </div>
+          </div>
+          <!-- Form Actions -->
+          <div
+            class="px-lg py-md border-t border-outline-variant bg-surface flex justify-end gap-md"
+          >
+            <button
+              class="px-md py-sm rounded border border-outline-variant bg-surface-container-lowest text-on-surface font-body-md text-body-md font-medium hover:bg-surface-container-low transition-colors"
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              class="px-md py-sm rounded bg-secondary text-on-secondary font-body-md text-body-md font-medium flex items-center gap-2 hover:bg-on-secondary-fixed-variant transition-colors"
+              type="button"
+            >
+              Submit Ticket
+              <span class="material-symbols-outlined text-sm">send</span>
+            </button>
+          </div>
+        </div>
+        <!-- Contextual Information Rail -->
+        <div class="lg:col-span-4 flex flex-col gap-gutter">
+          <!-- System Status Module -->
+          <div
+            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-md flex flex-col gap-md"
+          >
+            <h3 class="font-h3 text-h3 text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-outline">dns</span>
+              Network Status
+            </h3>
+            <div
+              class="flex items-center gap-sm bg-surface p-sm rounded border border-outline-variant"
+            >
+              <div
+                class="w-2 h-2 rounded-full bg-tertiary-fixed-dim shrink-0"
+              ></div>
+              <span class="font-body-sm text-body-sm text-on-surface"
+                >All Core Systems Operational</span
+              >
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-body-sm text-body-sm text-on-surface-variant"
+                >Last checked:</span
+              >
+              <span class="font-data-sm text-data-sm text-on-surface"
+                >14:02 UTC</span
+              >
+            </div>
+          </div>
+          <!-- Emergency Contact Module -->
+          <div
+            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-md flex flex-col gap-md"
+          >
+            <h3 class="font-h3 text-h3 text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-outline"
+                >support_agent</span
+              >
+              Direct Access
+            </h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+              For immediate critical failures involving patient safety systems,
+              bypass the ticketing system.
+            </p>
+            <div class="flex flex-col gap-sm mt-xs">
+              <div
+                class="flex justify-between items-center py-xs border-b border-outline-variant last:border-0"
+              >
+                <span class="font-body-sm text-body-sm text-on-surface"
+                  >US Toll-Free</span
+                >
+                <span
+                  class="font-data-md text-data-md text-secondary font-medium"
+                  >1-800-555-0199</span
+                >
+              </div>
+              <div
+                class="flex justify-between items-center py-xs border-b border-outline-variant last:border-0"
+              >
+                <span class="font-body-sm text-body-sm text-on-surface"
+                  >Intl Direct</span
+                >
+                <span
+                  class="font-data-md text-data-md text-secondary font-medium"
+                  >+44-20-7946-0958</span
+                >
+              </div>
+            </div>
+          </div>
+          <!-- Documentation Link -->
+          <a
+            class="bg-surface border border-outline-variant rounded-lg p-md flex items-center justify-between group hover:border-secondary transition-colors cursor-pointer"
+            href="#"
+          >
+            <div class="flex items-center gap-sm">
+              <span
+                class="material-symbols-outlined text-outline group-hover:text-secondary transition-colors"
+                >library_books</span
+              >
+              <span
+                class="font-body-sm text-body-sm font-medium text-on-surface"
+                >Review Documentation</span
+              >
+            </div>
+            <span class="material-symbols-outlined text-outline text-sm"
+              >open_in_new</span
+            >
+          </a>
+        </div>
+      </div>
+    </main>
+    <!-- Shared Footer -->
+    <footer class="border-t border-outline-variant bg-white z-10 relative">
+      <div class="flex flex-col md:flex-row justify-between items-center px-8 py-4 w-full max-w-7xl mx-auto">
+        <div class="mb-4 md:mb-0">
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans">© Clinical Intelligence Systems. All rights reserved.</span>
+        </div>
+        <nav class="flex flex-wrap justify-center gap-6">
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/privacy">Privacy Policy</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/terms">Terms of Service</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/support">Support</a>
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            Operational
+          </span>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,392 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Terms of Service - MediSight v3</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary-container": "#00201d",
+              "on-surface-variant": "#45464d",
+              "secondary-container": "#4069f2",
+              secondary: "#1d4ed8",
+              "tertiary-fixed-dim": "#80d5cb",
+              "on-secondary-fixed-variant": "#0039b5",
+              background: "#f7f9fb",
+              surface: "#f7f9fb",
+              "surface-tint": "#565e74",
+              "primary-fixed": "#dae2fd",
+              "tertiary-fixed": "#9cf2e8",
+              "on-error-container": "#93000a",
+              "surface-container": "#eceef0",
+              "secondary-fixed-dim": "#b7c4ff",
+              "primary-fixed-dim": "#bec6e0",
+              error: "#ba1a1a",
+              "primary-container": "#131b2e",
+              tertiary: "#000000",
+              "outline-variant": "#c6c6cd",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary-container": "#389189",
+              "surface-container-low": "#f2f4f6",
+              "inverse-surface": "#2d3133",
+              "on-error": "#ffffff",
+              "inverse-primary": "#bec6e0",
+              "on-background": "#191c1e",
+              "surface-dim": "#d8dadc",
+              "on-primary-fixed": "#131b2e",
+              "on-tertiary-fixed-variant": "#00504a",
+              "secondary-fixed": "#dce1ff",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#3f465c",
+              "surface-container-highest": "#e0e3e5",
+              "on-secondary-container": "#fffbff",
+              "inverse-on-surface": "#eff1f3",
+              "on-tertiary-fixed": "#00201d",
+              primary: "#000000",
+              "on-secondary-fixed": "#001551",
+              "surface-bright": "#f7f9fb",
+              "on-primary-container": "#7c839b",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "surface-variant": "#e0e3e5",
+              outline: "#76777d",
+              "on-surface": "#191c1e",
+              "error-container": "#ffdad6",
+            },
+            borderRadius: {
+              DEFAULT: "0.125rem",
+              lg: "0.25rem",
+              xl: "0.5rem",
+              full: "0.75rem",
+            },
+            spacing: {
+              xl: "32px",
+              xs: "4px",
+              sm: "8px",
+              lg: "24px",
+              gutter: "16px",
+              md: "16px",
+              margin: "24px",
+              base: "4px",
+            },
+            fontFamily: {
+              "label-caps": ["Inter"],
+              "data-lg": ["IBM Plex Mono"],
+              h2: ["Inter"],
+              "data-sm": ["IBM Plex Mono"],
+              h3: ["Inter"],
+              h1: ["Inter"],
+              "data-md": ["IBM Plex Mono"],
+              "body-sm": ["Inter"],
+              "body-md": ["Inter"],
+            },
+            fontSize: {
+              "label-caps": [
+                "11px",
+                {
+                  lineHeight: "1",
+                  letterSpacing: "0.05em",
+                  fontWeight: "700",
+                },
+              ],
+              "data-lg": [
+                "20px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "500",
+                },
+              ],
+              h2: [
+                "24px",
+                {
+                  lineHeight: "1.3",
+                  letterSpacing: "-0.01em",
+                  fontWeight: "600",
+                },
+              ],
+              "data-sm": [
+                "12px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "400",
+                },
+              ],
+              h3: [
+                "18px",
+                {
+                  lineHeight: "1.4",
+                  fontWeight: "600",
+                },
+              ],
+              h1: [
+                "32px",
+                {
+                  lineHeight: "1.2",
+                  letterSpacing: "-0.02em",
+                  fontWeight: "600",
+                },
+              ],
+              "data-md": [
+                "14px",
+                {
+                  lineHeight: "1.2",
+                  fontWeight: "500",
+                },
+              ],
+              "body-sm": [
+                "13px",
+                {
+                  lineHeight: "1.5",
+                  fontWeight: "400",
+                },
+              ],
+              "body-md": [
+                "14px",
+                {
+                  lineHeight: "1.5",
+                  fontWeight: "400",
+                },
+              ],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background text-on-background antialiased min-h-screen flex flex-col"
+  >
+    <!-- TopAppBar -->
+    <header
+      class="bg-surface-container-lowest dark:bg-slate-950 full-width top-0 border-b border-surface-variant dark:border-slate-800"
+    >
+      <div class="flex justify-between items-center w-full px-8 py-4">
+        <div
+          class="font-h1 text-h1 tracking-tighter text-on-background dark:text-slate-100 font-bold font-inter"
+        >
+          <a href="/" class="hover:text-secondary transition-colors">MediSight</a>
+        </div>
+        <nav class="flex gap-lg items-center">
+          <a
+            class="font-body-md text-body-md font-medium tracking-tight text-secondary dark:text-blue-400 border-b-[2px] border-secondary dark:border-blue-400 pb-1 hover:bg-surface dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70"
+            href="/terms"
+          >
+            Terms of Service
+          </a>
+          <a
+            class="font-body-md text-body-md font-medium tracking-tight text-on-surface-variant dark:text-slate-400 hover:text-on-background dark:hover:text-slate-200 hover:bg-surface dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70"
+            href="/privacy"
+          >
+            Privacy Policy
+          </a>
+          <a
+            class="font-body-md text-body-md font-medium tracking-tight text-on-surface-variant dark:text-slate-400 hover:text-on-background dark:hover:text-slate-200 hover:bg-surface dark:hover:bg-slate-900 transition-colors duration-200 cursor-pointer active:opacity-70"
+            href="/support"
+          >
+            Support
+          </a>
+        </nav>
+      </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="flex-grow p-margin md:p-xl flex justify-center w-full">
+      <div class="w-full max-w-[800px] flex flex-col gap-lg">
+        <!-- Document Header Card -->
+        <div
+          class="bg-surface-container-lowest border border-surface-variant rounded-xl p-xl flex flex-col gap-md"
+        >
+          <div
+            class="flex justify-between items-start border-b border-surface-variant pb-md"
+          >
+            <div>
+              <h1 class="font-h1 text-h1 text-on-background mb-xs">
+                Terms of Service
+              </h1>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                MediSight v3 Clinical Management System
+              </p>
+            </div>
+            <div class="flex flex-col items-end gap-base">
+              <span
+                class="font-data-md text-data-md text-on-surface bg-surface-variant px-sm py-[2px] rounded-DEFAULT"
+                >Version 3.4.1</span
+              >
+              <span class="font-data-sm text-data-sm text-on-surface-variant"
+                >Effective: 2023-10-24</span
+              >
+            </div>
+          </div>
+          <div class="font-body-md text-body-md text-on-background space-y-md">
+            <p>
+              These Terms of Service ("Terms") govern your access to and use of
+              the MediSight v3 clinical management system, including any
+              associated software, applications, and services (collectively, the
+              "Service"). By accessing or using the Service, you agree to be
+              bound by these Terms and our Privacy Policy.
+            </p>
+            <div
+              class="bg-surface-container p-md rounded-lg border border-surface-variant flex items-start gap-sm"
+            >
+              <span
+                class="material-symbols-outlined text-secondary"
+                style="font-variation-settings: &quot;FILL&quot; 1"
+                >info</span
+              >
+              <p class="font-body-sm text-body-sm text-on-surface-variant m-0">
+                Please read these terms carefully. They contain important
+                information regarding patient data handling, compliance
+                requirements (including HIPAA), and limitations of liability
+                specific to clinical software usage.
+              </p>
+            </div>
+          </div>
+        </div>
+        <!-- Section 1.0 -->
+        <div
+          class="bg-surface-container-lowest border border-surface-variant rounded-xl p-xl flex flex-col gap-md"
+        >
+          <div
+            class="flex items-center gap-sm border-b border-surface-variant pb-sm mb-sm"
+          >
+            <span class="font-data-lg text-data-lg text-secondary">1.0</span>
+            <h2 class="font-h2 text-h2 text-on-background">
+              Acceptance of Terms
+            </h2>
+          </div>
+          <div class="font-body-md text-body-md text-on-background space-y-md">
+            <p>
+              By creating an account, logging in, or otherwise utilizing the
+              MediSight v3 platform, you confirm that you are an authorized
+              healthcare professional or administrative staff member acting on
+              behalf of a licensed medical facility. You agree to use the
+              Service solely in connection with your professional duties and in
+              strict accordance with all applicable local, state, and federal
+              laws governing healthcare practices and patient privacy.
+            </p>
+          </div>
+        </div>
+        <!-- Section 2.0 -->
+        <div
+          class="bg-surface-container-lowest border border-surface-variant rounded-xl p-xl flex flex-col gap-md"
+        >
+          <div
+            class="flex items-center gap-sm border-b border-surface-variant pb-sm mb-sm"
+          >
+            <span class="font-data-lg text-data-lg text-secondary">2.0</span>
+            <h2 class="font-h2 text-h2 text-on-background">
+              Data Security &amp; Compliance
+            </h2>
+          </div>
+          <div class="font-body-md text-body-md text-on-background space-y-md">
+            <p>
+              The Service is designed to facilitate compliance with the Health
+              Insurance Portability and Accountability Act (HIPAA) and other
+              relevant data protection regulations. However, compliance is a
+              shared responsibility.
+            </p>
+            <ul class="list-none space-y-sm pl-0">
+              <li class="flex gap-sm items-start">
+                <span
+                  class="font-data-md text-data-md text-on-surface-variant mt-[2px]"
+                  >2.1</span
+                >
+                <span
+                  ><strong>Access Controls:</strong> You are responsible for
+                  maintaining the confidentiality of your login credentials. You
+                  must immediately report any suspected unauthorized access to
+                  your account or any other security breach.</span
+                >
+              </li>
+              <li class="flex gap-sm items-start">
+                <span
+                  class="font-data-md text-data-md text-on-surface-variant mt-[2px]"
+                  >2.2</span
+                >
+                <span
+                  ><strong>Protected Health Information (PHI):</strong> You
+                  agree to only enter, access, or transmit PHI through the
+                  Service when necessary for legitimate clinical or
+                  administrative purposes. You must not download or export PHI
+                  to unencrypted or unauthorized personal devices.</span
+                >
+              </li>
+              <li class="flex gap-sm items-start">
+                <span
+                  class="font-data-md text-data-md text-on-surface-variant mt-[2px]"
+                  >2.3</span
+                >
+                <span
+                  ><strong>Audit Logs:</strong> MediSight logs all access to
+                  patient records. These logs are subject to periodic review by
+                  your organization's compliance officer and external
+                  auditors.</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <!-- Section 3.0 -->
+        <div
+          class="bg-surface-container-lowest border border-surface-variant rounded-xl p-xl flex flex-col gap-md"
+        >
+          <div
+            class="flex items-center gap-sm border-b border-surface-variant pb-sm mb-sm"
+          >
+            <span class="font-data-lg text-data-lg text-secondary">3.0</span>
+            <h2 class="font-h2 text-h2 text-on-background">
+              System Availability &amp; Updates
+            </h2>
+          </div>
+          <div class="font-body-md text-body-md text-on-background space-y-md">
+            <p>
+              While we strive for 99.9% uptime, the Service may occasionally be
+              unavailable due to planned maintenance or unforeseen technical
+              issues.
+            </p>
+            <p>
+              We reserve the right to modify, update, or discontinue certain
+              features of the Service at any time. Significant changes affecting
+              clinical workflows will be communicated via the platform's release
+              notes at least 14 days prior to implementation, except in cases of
+              critical security patches.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- Shared Footer -->
+    <footer class="border-t border-outline-variant bg-white z-10 relative">
+      <div class="flex flex-col md:flex-row justify-between items-center px-8 py-4 w-full max-w-7xl mx-auto">
+        <div class="mb-4 md:mb-0">
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans">© Clinical Intelligence Systems. All rights reserved.</span>
+        </div>
+        <nav class="flex flex-wrap justify-center gap-6">
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/privacy">Privacy Policy</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/terms">Terms of Service</a>
+          <a class="text-[11px] tracking-tight text-on-surface-variant hover:text-on-surface transition-colors font-sans" href="/support">Support</a>
+          <span class="text-[11px] tracking-tight text-on-surface-variant font-sans flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            Operational
+          </span>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
